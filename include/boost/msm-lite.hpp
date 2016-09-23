@@ -1265,11 +1265,22 @@ class sm {
   status process_event(const TEvent &event) BOOST_MSM_LITE_NOEXCEPT_IF(is_noexcept) {
     BOOST_MSM_LITE_LOG(process_event, SM, event);
 #if defined(__cpp_exceptions) || defined(__EXCEPTIONS)
-    return process_event_noexcept(event, aux::integral_constant<bool, is_noexcept>{});
+    const auto handled = process_event_noexcept(event, aux::integral_constant<bool, is_noexcept>{});
 #else
-    return process_event_impl<get_event_mapping_t<TEvent, mappings_t>>(event, states_t{}, aux::make_index_sequence<regions>{});
+    const auto handled = process_event_impl<get_event_mapping_t<TEvent, mappings_t>>(event, states_t{}, aux::make_index_sequence<regions>{});
 #endif
     process_internal_event(anonymous{});
+
+    //if (handled == status::DEFFERED) {
+      //defer_.add(event);
+    //} else {
+      //const auto& defer = defer_.get();
+      //if (process_event_no_deffer(event) == status::HANDLED) {
+        //defer_.remove(event);
+      //}
+    //}
+
+    return handled;
   }
 
   template <class TEvent>
@@ -1311,6 +1322,17 @@ class sm {
   }
 
   void initialize(const aux::type_list<> &) BOOST_MSM_LITE_NOEXCEPT {}
+
+  template <class TEvent>
+  status process_event_no_deffer(const TEvent &event) BOOST_MSM_LITE_NOEXCEPT_IF(is_noexcept) {
+    BOOST_MSM_LITE_LOG(process_event, SM, event);
+#if defined(__cpp_exceptions) || defined(__EXCEPTIONS)
+    return process_event_noexcept(event, aux::integral_constant<bool, is_noexcept>{});
+#else
+    return process_event_impl<get_event_mapping_t<TEvent, mappings_t>>(event, states_t{}, aux::make_index_sequence<regions>{});
+#endif
+    process_internal_event(anonymous{});
+  }
 
   status process_internal_event(...) BOOST_MSM_LITE_NOEXCEPT_IF(is_noexcept) { return status::NOT_HANDLED; }
 

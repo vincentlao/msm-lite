@@ -41,9 +41,9 @@ struct history {
 int main() {
   msm::sm<history> sm;
   using namespace msm;
-  assert(sm.process_event("e1"_t));
-  assert(sm.process_event("e1"_t));  // enter sub
-  assert(sm.process_event("e3"_t));  // exit sub
-  assert(sm.process_event("e4"_t));  // enter sub
-  assert(sm.process_event("e2"_t));  // in sub again (history)
+  sm.process_event("e1"_t);
+  sm.process_event("e1"_t);  // enter sub
+  sm.process_event("e3"_t);  // exit sub
+  sm.process_event("e4"_t);  // enter sub
+  sm.process_event("e2"_t);  // in sub again (history)
 }

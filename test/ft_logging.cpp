@@ -55,8 +55,8 @@ test logging = [] {
 
   msm::sm<c> sm;
   using namespace msm;
-  expect(sm.process_event("e1"_t));
-  expect(sm.process_event(e2{}));
+  sm.process_event("e1"_t);
+  sm.process_event(e2{});
   expect(messages_out.size() == messages_expected.size());
   expect(std::equal(messages_out.begin(), messages_out.end(), messages_expected.begin()));
 };
@@ -82,8 +82,8 @@ test logging_entry_exit = [] {
 
   msm::sm<c> sm;
   using namespace msm;
-  expect(sm.process_event("e1"_t));
-  expect(sm.process_event(e2{}));
+  sm.process_event("e1"_t);
+  sm.process_event(e2{});
   expect(messages_out.size() == messages_expected.size());
   expect(std::equal(messages_out.begin(), messages_out.end(), messages_expected.begin()));
 };

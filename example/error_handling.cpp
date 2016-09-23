@@ -30,9 +30,9 @@ struct error_handling {
 int main() {
   using namespace msm;
   sm<error_handling> sm;
-  assert(sm.process_event("event1"_t));
+  sm.process_event("event1"_t);
   assert(sm.is("idle"_s, "error_handling"_s));
-  assert(sm.process_event("event2"_t));
+  sm.process_event("event2"_t);
   assert(sm.is("idle"_s, X));
   assert(sm.is(X));  // any region is terminated
 }

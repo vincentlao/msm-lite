@@ -38,7 +38,7 @@ test exception_minimal = [] {
   };
 
   msm::sm<c> sm;
-  expect(sm.process_event(e1{}));  // throws exception1
+  sm.process_event(e1{});  // throws exception1
   expect(sm.is(msm::X));
 };
 
@@ -59,7 +59,7 @@ test exception_data_minimal = [] {
   };
 
   msm::sm<c> sm;
-  expect(sm.process_event(e1{}));  // throws exception1
+  sm.process_event(e1{});  // throws exception1
   expect(sm.is(msm::X));
 };
 #endif
@@ -79,7 +79,7 @@ test exception_many = [] {
   };
 
   msm::sm<c> sm;
-  expect(sm.process_event(e1{}));  // throws exception2
+  sm.process_event(e1{});  // throws exception2
   expect(sm.is(msm::X));
 };
 
@@ -98,7 +98,7 @@ test generic_exception_handler = [] {
   };
 
   msm::sm<c> sm;
-  expect(sm.process_event(e1{}));  // throws int
+  sm.process_event(e1{});  // throws int
   expect(sm.is(msm::X));
 };
 
@@ -117,7 +117,7 @@ test generic_exception_handler_priority = [] {
   };
 
   msm::sm<c> sm;
-  expect(sm.process_event(e1{}));  // throws exception1
+  sm.process_event(e1{});  // throws exception1
   expect(sm.is(s2));
 };
 
@@ -134,7 +134,7 @@ test exception_not_handled = [] {
   };
 
   msm::sm<c> sm;
-  expect(!sm.process_event(e1{}));
+  sm.process_event(e1{});
   expect(sm.is(idle));
 };
 
@@ -154,7 +154,7 @@ test exception_orthogonal_handler = [] {
   };
 
   msm::sm<c> sm;
-  expect(sm.process_event(e1{}));  // throws exception1
+  sm.process_event(e1{});  // throws exception1
   expect(sm.is(idle, msm::X));
 };
 
@@ -173,7 +173,7 @@ test exception_orthogonal_handler_generic_handler = [] {
   };
 
   msm::sm<c> sm;
-  expect(sm.process_event(e1{}));  // throws exception1
+  sm.process_event(e1{});  // throws exception1
   expect(sm.is(idle, msm::X));
 };
 
@@ -193,6 +193,6 @@ test exception_orthogonal_handler_generic_handler_with_exception = [] {
   };
 
   msm::sm<c> sm;
-  expect(sm.process_event(e1{}));  // throws exception1
+  sm.process_event(e1{});  // throws exception1
   expect(sm.is(idle, msm::X));
 };

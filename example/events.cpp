@@ -35,9 +35,9 @@ struct events {
 int main() {
   msm::sm<events> sm;
   using namespace msm;
-  assert(sm.process_event(e1{}));
-  assert(sm.process_event(e2{}));
-  assert(sm.process_event("e3"_t));
-  assert(sm.process_event(42));
+  sm.process_event(e1{});
+  sm.process_event(e2{});
+  sm.process_event("e3"_t);
+  sm.process_event(42);
   assert(sm.is(X));
 }

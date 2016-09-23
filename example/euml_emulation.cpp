@@ -60,11 +60,11 @@ int main() {
   data d{42};
   msm::sm<euml_emulation> sm{d};
   assert(sm.is(idle));
-  assert(sm.process_event(e1{}));
+  sm.process_event(e1{});
   assert(sm.is(s1));
-  assert(sm.process_event(e2{}));
+  sm.process_event(e2{});
   assert(sm.is(s2));
-  assert(sm.process_event(e3{}));
+  sm.process_event(e3{});
   assert(sm.is(msm::X));
   assert(123 == d.get());
 }

@@ -324,16 +324,35 @@ constexpr auto max() noexcept {
   return max;
 }
 template <class... Ts>
-struct variant {
+class variant {
   using ids_t = type_id<Ts...>;
   alignas(max<alignof(Ts)...>()) byte data[max<sizeof(Ts)...>()];
-  int id = -1;
 
+public:
   template <class T>
-  void init(T object) noexcept {
+  explicit variant(T object) noexcept {
     id = get_id<ids_t, -1, T>();
     new (&data) T(static_cast<T &&>(object));
   }
+
+  template<class T>
+  auto apply(const T& expr) {
+    return apply_impl(expr, type_list<Ts...>{});
+  }
+
+  template<class X, class T>
+  static auto inline call(X x, const decltype(data)& d) {
+    return x(*((T*)d));
+  }
+
+  template<class T, class... Tx>
+  auto apply_impl(T expr, type_list<Tx...>) {
+    static int (*dispatch[])(T, const decltype(data)&) = { &variant::call<T, Tx>...  };
+    return dispatch[id](expr, data);
+  }
+
+private:
+  int id = -1;
 };
 template <class TExpr, class = void>
 struct zero_wrapper : TExpr {
@@ -440,25 +459,9 @@ struct is_sm<sm<T>> : aux::true_type {};
 struct fsm {
   auto configure() BOOST_MSM_LITE_NOEXCEPT { return aux::pool<>{}; }
 };
-struct _ {};
-struct operator_base {};
-struct internal_event {
-  static auto c_str() BOOST_MSM_LITE_NOEXCEPT { return "internal_event"; }
-};
-struct anonymous : internal_event {
-  static auto c_str() BOOST_MSM_LITE_NOEXCEPT { return "anonymous"; }
-};
-struct on_entry : internal_event {
-  static auto c_str() BOOST_MSM_LITE_NOEXCEPT { return "on_entry"; }
-};
-struct on_exit : internal_event {
-  static auto c_str() BOOST_MSM_LITE_NOEXCEPT { return "on_exit"; }
-};
-struct always {
-  auto operator()() const BOOST_MSM_LITE_NOEXCEPT { return true; }
-};
-struct none {
-  void operator()() BOOST_MSM_LITE_NOEXCEPT {}
+struct defer {
+  template <class T>
+  void operator()(const T &) BOOST_MSM_LITE_NOEXCEPT { }
 };
 struct process_event {
   template <class TEvent>
@@ -476,12 +479,35 @@ struct process_event {
     return process_event_impl<TEvent>{event};
   }
 };
-#if defined(BOOST_MSM_LITE_DEFER_LIMIT_SIZE)
-struct defer {
-  template <class TEvent>
-  auto operator()(const TEvent &) BOOST_MSM_LITE_NOEXCEPT {}
+enum class status { HANDLED, NOT_HANDLED, DEFFERED };
+template<class>
+inline status ret_status() {
+  return status::HANDLED;
+}
+template<>
+inline status ret_status<defer>() {
+  return status::DEFFERED;
+}
+struct _ {};
+struct operator_base {};
+struct internal_event {
+  static auto c_str() BOOST_MSM_LITE_NOEXCEPT { return "internal_event"; }
 };
-#endif
+struct anonymous : internal_event {
+  static auto c_str() BOOST_MSM_LITE_NOEXCEPT { return "anonymous"; }
+};
+struct on_entry : internal_event {
+  static auto c_str() BOOST_MSM_LITE_NOEXCEPT { return "on_entry"; }
+};
+struct on_exit : internal_event {
+  static auto c_str() BOOST_MSM_LITE_NOEXCEPT { return "on_exit"; }
+};
+struct always {
+  status operator()() const BOOST_MSM_LITE_NOEXCEPT { return status::HANDLED; }
+};
+struct none {
+  void operator()() BOOST_MSM_LITE_NOEXCEPT {}
+};
 template <class>
 struct event {
   template <class T, BOOST_MSM_LITE_REQUIRES(concepts::callable<bool, T>::value)>
@@ -916,14 +942,14 @@ struct transition<state<S1>, state<S2>, event<E>, G, A> {
   transition(const G &g, const A &a) : g(g), a(a) {}
 
   template <class SM>
-  auto execute(SM &self, const E &event, aux::byte &current_state) BOOST_MSM_LITE_NOEXCEPT_IF(SM::is_noexcept) {
+  status execute(SM &self, const E &event, aux::byte &current_state) BOOST_MSM_LITE_NOEXCEPT_IF(SM::is_noexcept) {
     if (call(g, event, self.deps_, self)) {
       call(a, event, self.deps_, self);
       self.template update_current_state<typename state<S1>::explicit_states>(
           current_state, aux::get_id<typename SM::states_ids_t, -1, dst_state>(), state<src_state>{}, state<dst_state>{});
-      return true;
+      return ret_status<A>();
     }
-    return false;
+    return status::NOT_HANDLED;
   }
 
   G g;
@@ -943,11 +969,11 @@ struct transition<state<S1>, state<S2>, event<E>, always, A> {
   transition(const always &, const A &a) : a(a) {}
 
   template <class SM>
-  auto execute(SM &self, const E &event, aux::byte &current_state) BOOST_MSM_LITE_NOEXCEPT_IF(SM::is_noexcept) {
+  status execute(SM &self, const E &event, aux::byte &current_state) BOOST_MSM_LITE_NOEXCEPT_IF(SM::is_noexcept) {
     call(a, event, self.deps_, self);
     self.template update_current_state<typename state<S1>::explicit_states>(
         current_state, aux::get_id<typename SM::states_ids_t, -1, dst_state>(), state<src_state>{}, state<dst_state>{});
-    return true;
+    return ret_status<A>();
   }
 
   A a;
@@ -966,13 +992,13 @@ struct transition<state<S1>, state<S2>, event<E>, G, none> {
   transition(const G &g, const none &) : g(g) {}
 
   template <class SM>
-  auto execute(SM &self, const E &event, aux::byte &current_state) BOOST_MSM_LITE_NOEXCEPT_IF(SM::is_noexcept) {
+  status execute(SM &self, const E &event, aux::byte &current_state) BOOST_MSM_LITE_NOEXCEPT_IF(SM::is_noexcept) {
     if (call(g, event, self.deps_, self)) {
       self.template update_current_state<typename state<S1>::explicit_states>(
           current_state, aux::get_id<typename SM::states_ids_t, -1, dst_state>(), state<src_state>{}, state<dst_state>{});
-      return true;
+      return status::HANDLED;
     }
-    return false;
+    return status::NOT_HANDLED;
   }
 
   G g;
@@ -991,10 +1017,10 @@ struct transition<state<S1>, state<S2>, event<E>, always, none> {
   transition(const always &, const none &) {}
 
   template <class SM>
-  auto execute(SM &self, const E &, aux::byte &current_state) BOOST_MSM_LITE_NOEXCEPT_IF(SM::is_noexcept) {
+  status execute(SM &self, const E &, aux::byte &current_state) BOOST_MSM_LITE_NOEXCEPT_IF(SM::is_noexcept) {
     self.template update_current_state<typename state<S1>::explicit_states>(
         current_state, aux::get_id<typename SM::states_ids_t, -1, dst_state>(), state<src_state>{}, state<dst_state>{});
-    return true;
+    return status::HANDLED;
   }
 };
 template <class...>
@@ -1002,9 +1028,9 @@ struct transition_impl;
 template <class T, class... Ts>
 struct transition_impl<T, Ts...> {
   template <class SM, class TEvent>
-  static bool execute(SM &self, const TEvent &event, aux::byte &current_state) BOOST_MSM_LITE_NOEXCEPT_IF(SM::is_noexcept) {
-    if (aux::get<T>(self.transitions_).execute(self, event, current_state)) {
-      return true;
+  static status execute(SM &self, const TEvent &event, aux::byte &current_state) BOOST_MSM_LITE_NOEXCEPT_IF(SM::is_noexcept) {
+    if (aux::get<T>(self.transitions_).execute(self, event, current_state) != status::NOT_HANDLED) {
+      return status::HANDLED;
     }
     return transition_impl<Ts...>::execute(self, event, current_state);
   }
@@ -1012,27 +1038,27 @@ struct transition_impl<T, Ts...> {
 template <class T>
 struct transition_impl<T> {
   template <class SM, class TEvent>
-  static bool execute(SM &self, const TEvent &event, aux::byte &current_state) BOOST_MSM_LITE_NOEXCEPT_IF(SM::is_noexcept) {
+  static status execute(SM &self, const TEvent &event, aux::byte &current_state) BOOST_MSM_LITE_NOEXCEPT_IF(SM::is_noexcept) {
     return aux::get<T>(self.transitions_).execute(self, event, current_state);
   }
 
   template <class SM, class>
-  static bool execute(SM &self, const on_entry &event, aux::byte &current_state) BOOST_MSM_LITE_NOEXCEPT_IF(SM::is_noexcept) {
+  static status execute(SM &self, const on_entry &event, aux::byte &current_state) BOOST_MSM_LITE_NOEXCEPT_IF(SM::is_noexcept) {
     aux::get<T>(self.transitions_).execute(self, event, current_state);
-    return false;  // let the top sm process on_entry event
+    return status::NOT_HANDLED;  // let the top sm process on_entry event
   }
 
   template <class SM, class>
-  static bool execute(SM &self, const on_exit &event, aux::byte &current_state) BOOST_MSM_LITE_NOEXCEPT_IF(SM::is_noexcept) {
+  static status execute(SM &self, const on_exit &event, aux::byte &current_state) BOOST_MSM_LITE_NOEXCEPT_IF(SM::is_noexcept) {
     aux::get<T>(self.transitions_).execute(self, event, current_state);
-    return false;  // let the top sm process on_exit event
+    return status::NOT_HANDLED;  // let the top sm process on_exit event
   }
 };
 template <>
 struct transition_impl<> {
   template <class SM, class TEvent>
-  static bool execute(SM &, const TEvent &, aux::byte &) BOOST_MSM_LITE_NOEXCEPT_IF(SM::is_noexcept) {
-    return false;
+  static status execute(SM &, const TEvent &, aux::byte &) BOOST_MSM_LITE_NOEXCEPT_IF(SM::is_noexcept) {
+    return status::NOT_HANDLED;
   }
 };
 template <class...>
@@ -1040,15 +1066,15 @@ struct transition_sub_impl;
 template <class TSM, class T, class... Ts>
 struct transition_sub_impl<TSM, T, Ts...> {
   template <class SM, class TEvent>
-  static bool execute(SM &self, const TEvent &event, aux::byte &current_state) BOOST_MSM_LITE_NOEXCEPT_IF(SM::is_noexcept) {
-    return aux::try_get<TSM>(self.deps_).process_event(event) ? true
-                                                              : transition_impl<T, Ts...>::execute(self, event, current_state);
+  static status execute(SM &self, const TEvent &event, aux::byte &current_state) BOOST_MSM_LITE_NOEXCEPT_IF(SM::is_noexcept) {
+    const auto handled = aux::try_get<TSM>(self.deps_).process_event(event);
+    return handled != status::NOT_HANDLED ? handled : transition_impl<T, Ts...>::execute(self, event, current_state);
   }
 };
 template <class TSM>
 struct transition_sub_impl<TSM> {
   template <class SM, class TEvent>
-  static bool execute(SM &self, const TEvent &event, aux::byte &) BOOST_MSM_LITE_NOEXCEPT_IF(SM::is_noexcept) {
+  static status execute(SM &self, const TEvent &event, aux::byte &) BOOST_MSM_LITE_NOEXCEPT_IF(SM::is_noexcept) {
     return aux::try_get<TSM>(self.deps_).process_event(event);
   }
 };
@@ -1235,7 +1261,7 @@ class sm {
   }
 
   template <class TEvent>
-  bool process_event(const TEvent &event) BOOST_MSM_LITE_NOEXCEPT_IF(is_noexcept) {
+  status process_event(const TEvent &event) BOOST_MSM_LITE_NOEXCEPT_IF(is_noexcept) {
     BOOST_MSM_LITE_LOG(process_event, SM, event);
 #if defined(__cpp_exceptions) || defined(__EXCEPTIONS)
     return process_event_noexcept(event, aux::integral_constant<bool, is_noexcept>{});
@@ -1245,7 +1271,7 @@ class sm {
   }
 
   template <class TEvent>
-  bool process_event(const event<TEvent> &) BOOST_MSM_LITE_NOEXCEPT_IF(is_noexcept) {
+  status process_event(const event<TEvent> &) BOOST_MSM_LITE_NOEXCEPT_IF(is_noexcept) {
     return process_event(TEvent{});
   }
 
@@ -1284,12 +1310,12 @@ class sm {
   void initialize(const aux::type_list<> &) BOOST_MSM_LITE_NOEXCEPT {}
 
   template <class TEvent, BOOST_MSM_LITE_REQUIRES(aux::is_base_of<aux::pool_type<TEvent>, events_ids_t>::value)>
-  bool process_internal_event(const TEvent &event) BOOST_MSM_LITE_NOEXCEPT_IF(is_noexcept) {
+  status process_internal_event(const TEvent &event) BOOST_MSM_LITE_NOEXCEPT_IF(is_noexcept) {
     return process_event(event);
   }
 
   template <class TEvent, BOOST_MSM_LITE_REQUIRES(aux::is_base_of<aux::pool_type<TEvent>, events_ids_t>::value)>
-  bool process_internal_event(const TEvent &event, aux::byte &current_state) BOOST_MSM_LITE_NOEXCEPT_IF(is_noexcept) {
+  status process_internal_event(const TEvent &event, aux::byte &current_state) BOOST_MSM_LITE_NOEXCEPT_IF(is_noexcept) {
     BOOST_MSM_LITE_LOG(process_event, SM, event);
 #if defined(__cpp_exceptions) || defined(__EXCEPTIONS)
     return process_event_noexcept(event, current_state, aux::integral_constant<bool, is_noexcept>{});
@@ -1298,51 +1324,51 @@ class sm {
 #endif
   }
 
-  bool process_internal_event(...) BOOST_MSM_LITE_NOEXCEPT_IF(is_noexcept) { return false; }
+  status process_internal_event(...) BOOST_MSM_LITE_NOEXCEPT_IF(is_noexcept) { return status::NOT_HANDLED; }
 
   template <class TMappings, class TEvent, class... TStates>
-  auto process_event_impl(const TEvent &event, const aux::type_list<TStates...> &, const aux::index_sequence<0> &)
+  status process_event_impl(const TEvent &event, const aux::type_list<TStates...> &, const aux::index_sequence<0> &)
       BOOST_MSM_LITE_NOEXCEPT_IF(is_noexcept) {
-    static bool (*dispatch_table[sizeof...(TStates)])(
+    static status (*dispatch_table[sizeof...(TStates)])(
         sm &, const TEvent &, aux::byte &) = {&get_state_mapping_t<TStates, TMappings>::template execute<sm, TEvent>...};
     BOOST_MSM_LITE_THREAD_SAFE__(std::lock_guard<std::recursive_mutex> guard{mutex_});
     return dispatch_table[current_state_[0]](*this, event, current_state_[0]);
   }
 
   template <class TMappings, class TEvent, class... TStates>
-  auto process_event_impl(const TEvent &event, const aux::type_list<TStates...> &, aux::byte &current_state)
+  status process_event_impl(const TEvent &event, const aux::type_list<TStates...> &, aux::byte &current_state)
       BOOST_MSM_LITE_NOEXCEPT_IF(is_noexcept) {
-    static bool (*dispatch_table[sizeof...(TStates)])(
+    static status (*dispatch_table[sizeof...(TStates)])(
         sm &, const TEvent &, aux::byte &) = {&get_state_mapping_t<TStates, TMappings>::template execute<sm, TEvent>...};
     BOOST_MSM_LITE_THREAD_SAFE__(std::lock_guard<std::recursive_mutex> guard{mutex_});
     return dispatch_table[current_state](*this, event, current_state);
   }
 
   template <class TMappings, class TEvent, class... TStates, int... Ns>
-  auto process_event_impl(const TEvent &event, const aux::type_list<TStates...> &, const aux::index_sequence<Ns...> &)
+  status process_event_impl(const TEvent &event, const aux::type_list<TStates...> &, const aux::index_sequence<Ns...> &)
       BOOST_MSM_LITE_NOEXCEPT_IF(is_noexcept) {
-    static bool (*dispatch_table[sizeof...(TStates)])(
+    static status (*dispatch_table[sizeof...(TStates)])(
         sm &, const TEvent &, aux::byte &) = {&get_state_mapping_t<TStates, TMappings>::template execute<sm, TEvent>...};
     auto handled = false;
     BOOST_MSM_LITE_THREAD_SAFE__(std::lock_guard<std::recursive_mutex> guard{mutex_});
-    int _[]{0, (handled |= dispatch_table[current_state_[Ns]](*this, event, current_state_[Ns]), 0)...};
+    int _[]{0, (handled |= dispatch_table[current_state_[Ns]](*this, event, current_state_[Ns]) != status::NOT_HANDLED, 0)...};
     (void)_;
-    return handled;
+    return handled ? status::HANDLED : status::NOT_HANDLED;
   }
 
 #if defined(__cpp_exceptions) || defined(__EXCEPTIONS)
   template <class TEvent>
-  bool process_event_noexcept(const TEvent &event, const aux::true_type &) noexcept {
+  status process_event_noexcept(const TEvent &event, const aux::true_type &) noexcept {
     return process_event_impl<get_event_mapping_t<TEvent, mappings_t>>(event, states_t{}, aux::make_index_sequence<regions>{});
   }
 
   template <class TEvent>
-  bool process_event_noexcept(const TEvent &event, aux::byte &current_state, const aux::true_type &) noexcept {
+  status process_event_noexcept(const TEvent &event, aux::byte &current_state, const aux::true_type &) noexcept {
     return process_event_impl<get_event_mapping_t<TEvent, mappings_t>>(event, states_t{}, current_state);
   }
 
   template <class TEvent>
-  bool process_event_noexcept(const TEvent &event, const aux::false_type &) {
+  status process_event_noexcept(const TEvent &event, const aux::false_type &) {
     try {
       return process_event_impl<get_event_mapping_t<TEvent, mappings_t>>(event, states_t{},
                                                                          aux::make_index_sequence<regions>{});
@@ -1351,10 +1377,10 @@ class sm {
     }
   }
 
-  bool process_exception(const aux::type_list<> &) { return process_event(exception<_>{}); }
+  status process_exception(const aux::type_list<> &) { return process_event(exception<_>{}); }
 
   template <class E, class... Es>
-  bool process_exception(const aux::type_list<E, Es...> &) {
+  status process_exception(const aux::type_list<E, Es...> &) {
     try {
       throw;
     } catch (const typename E::type &e) {
@@ -1458,9 +1484,6 @@ class sm {
   deps_t deps_;
   transitions_t transitions_;
 
-#if defined(BOOST_MSM_LITE_DEFER_LIMIT_SIZE)
-#endif
-
  protected:
   aux::byte current_state_[regions];
 
@@ -1476,12 +1499,12 @@ struct dispatch_event_impl {
 
   template <class SM, class T>
   static bool execute_impl(SM &sm, const T &data, const aux::true_type &) BOOST_MSM_LITE_NOEXCEPT {
-    return sm.process_event(TEvent(data));
+    return sm.process_event(TEvent(data)) != detail::status::NOT_HANDLED;
   }
 
   template <class SM, class T>
   static bool execute_impl(SM &sm, const T &, const aux::false_type &) BOOST_MSM_LITE_NOEXCEPT {
-    return sm.process_event(TEvent());
+    return sm.process_event(TEvent()) != detail::status::NOT_HANDLED;
   }
 };
 template <>
@@ -1571,6 +1594,7 @@ auto operator""_t() BOOST_MSM_LITE_NOEXCEPT {
 __attribute__((unused)) static detail::state<detail::terminate_state> X;
 __attribute__((unused)) static detail::history_state H;
 __attribute__((unused)) static detail::process_event process_event;
+__attribute__((unused)) static detail::defer defer;
 template <class... Ts, BOOST_MSM_LITE_REQUIRES(aux::is_same<aux::bool_list<aux::always<Ts>::value...>,
                                                             aux::bool_list<concepts::transitional<Ts>::value...>>::value)>
 auto make_transition_table(Ts... ts) BOOST_MSM_LITE_NOEXCEPT {

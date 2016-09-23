@@ -56,23 +56,23 @@ int main() {
   assert(sm.is("idle"_s));
   assert(sub_sm.is("idle"_s));
 
-  assert(sm.process_event(e1{}));
+  sm.process_event(e1{});
   assert(sm.is("s1"_s));
   assert(sub_sm.is("idle"_s));
 
-  assert(sm.process_event(e2{}));  // enter sub sm
+  sm.process_event(e2{});  // enter sub sm
   assert(sm.is(sub_state));
   assert(sub_sm.is("idle"_s));
 
-  assert(sm.process_event(e3{}));  // in sub sm
+  sm.process_event(e3{});  // in sub sm
   assert(sm.is(sub_state));
   assert(sub_sm.is("s1"_s));
 
-  assert(sm.process_event(e4{}));  // finish sub sm
+  sm.process_event(e4{});  // finish sub sm
   assert(sm.is(sub_state));
   assert(sub_sm.is(X));
 
-  assert(sm.process_event(e5{}));  // exit sub sm
+  sm.process_event(e5{});  // exit sub sm
   assert(sm.is(X));
   assert(sub_sm.is(X));
 }

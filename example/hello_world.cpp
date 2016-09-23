@@ -39,10 +39,10 @@ int main() {
   msm::sm<hello_world> sm;
   using namespace msm;
   assert(sm.is("idle"_s));
-  assert(sm.process_event(e1{}));
+  sm.process_event(e1{});
   assert(sm.is("s1"_s));
-  assert(sm.process_event(e2{}));
+  sm.process_event(e2{});
   assert(sm.is("s2"_s));
-  assert(sm.process_event(e3{}));
+  sm.process_event(e3{});
   assert(sm.is(X));
 }

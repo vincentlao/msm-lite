@@ -60,6 +60,6 @@ struct logging {
 
 int main() {
   msm::sm<logging> sm;
-  assert(sm.process_event(e1{}));
-  assert(!sm.process_event(e2{}));
+  sm.process_event(e1{});
+  sm.process_event(e2{});
 }

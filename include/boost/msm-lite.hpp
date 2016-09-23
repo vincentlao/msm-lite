@@ -1226,6 +1226,7 @@ class sm {
   using events_t = aux::apply_t<aux::unique_t, aux::apply_t<get_events, transitions_t>>;
   using events_ids_t = aux::apply_t<aux::pool, events_t>;
   using deps_t = aux::apply_t<aux::pool, aux::join_t<get_sm<SM>, sub_sms_t, aux::apply_t<detail::merge_deps, transitions_t>>>;
+  using has_deffer_actions = aux::is_base_of<aux::pool_type<defer>, deps_t>;
   static constexpr auto regions = aux::get_size<initial_states_t>::value > 0 ? aux::get_size<initial_states_t>::value : 1;
   static_assert(regions > 0, "At least one initial state is required");
 
@@ -1268,6 +1269,7 @@ class sm {
 #else
     return process_event_impl<get_event_mapping_t<TEvent, mappings_t>>(event, states_t{}, aux::make_index_sequence<regions>{});
 #endif
+    process_internal_event(anonymous{});
   }
 
   template <class TEvent>
@@ -1305,13 +1307,21 @@ class sm {
     int _[]{0, (region = i, current_state_[region] = aux::get_id<states_ids_t, 0, TStates>(), ++i, 0)...};
     (void)_;
     process_internal_event(anonymous{});
+    process_internal_event(on_entry{});
   }
 
   void initialize(const aux::type_list<> &) BOOST_MSM_LITE_NOEXCEPT {}
 
+  status process_internal_event(...) BOOST_MSM_LITE_NOEXCEPT_IF(is_noexcept) { return status::NOT_HANDLED; }
+
   template <class TEvent, BOOST_MSM_LITE_REQUIRES(aux::is_base_of<aux::pool_type<TEvent>, events_ids_t>::value)>
   status process_internal_event(const TEvent &event) BOOST_MSM_LITE_NOEXCEPT_IF(is_noexcept) {
-    return process_event(event);
+    BOOST_MSM_LITE_LOG(process_event, SM, event);
+#if defined(__cpp_exceptions) || defined(__EXCEPTIONS)
+    return process_event_noexcept(event, aux::integral_constant<bool, is_noexcept>{});
+#else
+    return process_event_impl<get_event_mapping_t<TEvent, mappings_t>>(event, states_t{}, aux::make_index_sequence<regions>{});
+#endif
   }
 
   template <class TEvent, BOOST_MSM_LITE_REQUIRES(aux::is_base_of<aux::pool_type<TEvent>, events_ids_t>::value)>
@@ -1323,8 +1333,6 @@ class sm {
     return process_event_impl<get_event_mapping_t<TEvent, mappings_t>>(event, states_t{}, current_state);
 #endif
   }
-
-  status process_internal_event(...) BOOST_MSM_LITE_NOEXCEPT_IF(is_noexcept) { return status::NOT_HANDLED; }
 
   template <class TMappings, class TEvent, class... TStates>
   status process_event_impl(const TEvent &event, const aux::type_list<TStates...> &, const aux::index_sequence<0> &)
@@ -1394,14 +1402,14 @@ class sm {
   template <class TVisitor, class... TStates>
   void visit_current_states_impl(const TVisitor &visitor, const aux::type_list<TStates...> &,
                                  const aux::index_sequence<0> &) const BOOST_MSM_LITE_NOEXCEPT_IF(is_noexcept) {
-    static void (*dispatch_table[])(const TVisitor &) = {&sm::visit_state<TVisitor, TStates>...};
+    static void (*dispatch_table[sizeof...(TStates)])(const TVisitor &) = {&sm::visit_state<TVisitor, TStates>...};
     dispatch_table[current_state_[0]](visitor);
   }
 
   template <class TVisitor, class... TStates, int... Ns>
   void visit_current_states_impl(const TVisitor &visitor, const aux::type_list<TStates...> &,
                                  const aux::index_sequence<Ns...> &) const BOOST_MSM_LITE_NOEXCEPT {
-    static void (*dispatch_table[])(const TVisitor &) = {&sm::visit_state<TVisitor, TStates>...};
+    static void (*dispatch_table[sizeof...(TStates)])(const TVisitor &) = {&sm::visit_state<TVisitor, TStates>...};
     int _[]{0, (dispatch_table[current_state_[Ns]](visitor), 0)...};
     (void)_;
   }

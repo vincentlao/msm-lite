@@ -40,7 +40,15 @@ auto s1 = msm::state<s1_label>{};
 
 test logging = [] {
   messages_out.clear();
-  std::vector<std::string> messages_expected = {"e1", "idle -> A State", "An Event", "A State -> terminate"};
+  // clang-format off
+  std::vector<std::string> messages_expected = {
+     "e1"
+   , "idle -> A State"
+   , "An Event"
+   , "A State -> terminate"
+  };
+  // clang-format on
+
   struct c {
     auto configure() noexcept {
       using namespace msm;
@@ -63,8 +71,19 @@ test logging = [] {
 
 test logging_entry_exit = [] {
   messages_out.clear();
-  std::vector<std::string> messages_expected = {"e1",       "on_exit", "idle -> A State",      "on_entry",
-                                                "An Event", "on_exit", "A State -> terminate", "on_entry"};
+  // clang-format off
+  std::vector<std::string> messages_expected = {
+     "on_entry"
+   , "e1"
+   , "on_exit"
+   , "idle -> A State"
+   , "on_entry"
+   , "An Event"
+   , "on_exit"
+   , "A State -> terminate"
+   , "on_entry"
+  };
+  // clang-format on
 
   struct c {
     auto configure() noexcept {

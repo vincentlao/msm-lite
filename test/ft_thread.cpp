@@ -56,7 +56,7 @@ test process_event_reentrant = [] {
     }
   };
 
-  msm::sm<c> sm{c()};
+  msm::sm<c> sm;
   // Hangs forever awaiting lock if mutex is not reentrant.
   sm.process_event(e1{});
 };

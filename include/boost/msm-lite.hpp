@@ -288,6 +288,7 @@ struct pool : pool_type<Ts>... {
 };
 template <>
 struct pool<> {
+  explicit pool(...) BOOST_MSM_LITE_NOEXCEPT {}
   aux::byte _[0];
 };
 template <class>
@@ -1199,6 +1200,8 @@ using get_history_states =
     aux::join_t<aux::conditional_t<!Ts::history && Ts::initial, aux::type_list<typename Ts::src_state>, aux::type_list<>>...>;
 template <class T, class U = T>
 using get_sm = aux::conditional_t<aux::is_trivially_constructible<T>::value, aux::type_list<U>, aux::type_list<U &>>;
+template <class T>
+using get_base_sm = aux::conditional_t<aux::is_trivially_constructible<T>::value, aux::type_list<>, aux::type_list<T &>>;
 template <class>
 struct get_sub_sm : aux::type_list<> {};
 template <class T>
@@ -1232,7 +1235,7 @@ class sm {
   using sub_sms_t = aux::apply_t<get_sub_sms, states_t>;
   using events_t = aux::apply_t<aux::unique_t, aux::apply_t<get_events, transitions_t>>;
   using events_ids_t = aux::apply_t<aux::pool, events_t>;
-  using deps_t = aux::apply_t<aux::pool, aux::join_t<get_sm<SM>, sub_sms_t, aux::apply_t<detail::merge_deps, transitions_t>>>;
+  using deps_t = aux::apply_t<aux::pool, aux::join_t<get_base_sm<SM>, sub_sms_t, aux::apply_t<detail::merge_deps, transitions_t>>>;
   using has_deffer_actions = aux::is_base_of<aux::pool_type<defer>, deps_t>;
   static constexpr auto regions = aux::size<initial_states_t>::value > 0 ? aux::size<initial_states_t>::value : 1;
   static_assert(regions > 0, "At least one initial state is required");

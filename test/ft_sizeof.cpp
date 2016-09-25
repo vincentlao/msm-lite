@@ -72,7 +72,7 @@ test sm_sizeof_empty = [] {
     }
   };
 
-  static_expect(2 /*deps=1, current_state=1*/ == sizeof(msm::sm<empty>{}));
+  static_expect(1 /*current_state=1*/ == sizeof(msm::sm<empty>{}));
 };
 
 test sm_sizeof_default_guard_action = [] {
@@ -92,7 +92,7 @@ test sm_sizeof_default_guard_action = [] {
     }
   };
 
-  static_expect(2 /*deps=1, current_state=1*/ == sizeof(msm::sm<c>{}));
+  static_expect(1 /*current_state=1*/ == sizeof(msm::sm<c>{}));
 };
 
 test sm_sizeof_no_capture = [] {
@@ -205,7 +205,7 @@ test sm_sizeof_no_capture = [] {
       // clang-format on
     }
   };
-  static_expect(2 /*deps=1, current_state=1*/ == sizeof(msm::sm<no_capture_transition>));
+  static_expect(1 /*current_state=1*/ == sizeof(msm::sm<no_capture_transition>));
 };
 
 test sm_sizeof_more_than_256_transitions = [] {
@@ -475,5 +475,5 @@ test sm_sizeof_more_than_256_transitions = [] {
       // clang-format on
     }
   };
-  static_expect(4 /*deps=1, current_state=2, alignment = 1*/ == sizeof(msm::sm<c>));
+  static_expect(2 /*current_state=2*/ == sizeof(msm::sm<c>));
 };

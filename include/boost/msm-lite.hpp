@@ -52,7 +52,7 @@ struct none_type {};
 template <char... Chrs>
 struct string {
   static auto c_str() BOOST_MSM_LITE_NOEXCEPT {
-    static char str[] = {Chrs..., 0};
+    static constexpr char str[] = {Chrs..., 0};
     return str;
   }
 };
@@ -244,6 +244,10 @@ struct tuple_impl<index_sequence<Ns...>, Ts...> : tuple_type<Ns, Ts>... {
   using boost_di_inject__ = aux::type_list<Ts...>;
   explicit tuple_impl(Ts... ts) BOOST_MSM_LITE_NOEXCEPT : tuple_type<Ns, Ts>{ts}... {}
 };
+template <>
+struct tuple_impl<index_sequence<0>> {
+  aux::byte _[0];
+};
 template <class... Ts>
 using tuple = tuple_impl<make_index_sequence<sizeof...(Ts)>, Ts...>;
 template <int N, class T>
@@ -264,11 +268,11 @@ auto try_get(...) BOOST_MSM_LITE_NOEXCEPT {
   return aux::remove_reference_t<T>{};
 }
 template <class T>
-auto& try_get(pool_type<T> *object) BOOST_MSM_LITE_NOEXCEPT {
+auto &try_get(pool_type<T> *object) BOOST_MSM_LITE_NOEXCEPT {
   return static_cast<pool_type<T> &>(*object).value;
 }
 template <class T>
-auto& try_get(pool_type<T&> *object) BOOST_MSM_LITE_NOEXCEPT {
+auto &try_get(pool_type<T &> *object) BOOST_MSM_LITE_NOEXCEPT {
   return static_cast<pool_type<T &> &>(*object).value;
 }
 template <class T, class TPool>
@@ -281,6 +285,10 @@ struct pool : pool_type<Ts>... {
   explicit pool(Ts... ts) BOOST_MSM_LITE_NOEXCEPT : pool_type<Ts>{ts}... {}
   template <class... TArgs>
   pool(init &&, pool<TArgs...> &&p) BOOST_MSM_LITE_NOEXCEPT : pool_type<Ts>{aux::try_get<Ts>(&p)}... {}
+};
+template <>
+struct pool<> {
+  aux::byte _[0];
 };
 template <class>
 struct is_pool : aux::false_type {};
@@ -307,9 +315,9 @@ constexpr auto get_id() BOOST_MSM_LITE_NOEXCEPT {
   return get_id_impl<T, D>((TIds *)0);
 }
 template <class>
-struct get_size;
+struct size;
 template <template <class...> class T, class... Ts>
-struct get_size<T<Ts...>> {
+struct size<T<Ts...>> {
   static constexpr auto value = sizeof...(Ts);
 };
 template <int... Ts>
@@ -324,30 +332,30 @@ class variant {
   using ids_t = type_id<Ts...>;
   alignas(max<alignof(Ts)...>()) byte data[max<sizeof(Ts)...>()];
 
-public:
+ public:
   template <class T>
   explicit variant(T object) noexcept {
     id = get_id<ids_t, -1, T>();
     new (&data) T(static_cast<T &&>(object));
   }
 
-  template<class T>
-  auto apply(const T& expr) {
+  template <class T>
+  auto apply(const T &expr) {
     return apply_impl(expr, type_list<Ts...>{});
   }
 
-  template<class X, class T>
-  static auto inline call(X x, const decltype(data)& d) {
-    return x(*((T*)d));
+  template <class X, class T>
+  static auto inline call(X x, const decltype(data) &d) {
+    return x(*((T *)d));
   }
 
-  template<class T, class... Tx>
+  template <class T, class... Tx>
   auto apply_impl(T expr, type_list<Tx...>) {
-    static int (*dispatch[])(T, const decltype(data)&) = { &variant::call<T, Tx>...  };
+    static int (*dispatch[])(T, const decltype(data) &) = {&variant::call<T, Tx>...};
     return dispatch[id](expr, data);
   }
 
-private:
+ private:
   int id = -1;
 };
 template <class TExpr, class = void>
@@ -457,7 +465,7 @@ struct fsm {
 };
 struct defer {
   template <class T>
-  void operator()(const T &) BOOST_MSM_LITE_NOEXCEPT { }
+  void operator()(const T &) BOOST_MSM_LITE_NOEXCEPT {}
 };
 struct process_event {
   template <class TEvent>
@@ -476,11 +484,11 @@ struct process_event {
   }
 };
 enum class status { HANDLED, NOT_HANDLED, DEFFERED };
-template<class>
+template <class>
 inline status ret_status() {
   return status::HANDLED;
 }
-template<>
+template <>
 inline status ret_status<defer>() {
   return status::DEFFERED;
 }
@@ -500,9 +508,11 @@ struct on_exit : internal_event {
 };
 struct always {
   status operator()() const BOOST_MSM_LITE_NOEXCEPT { return status::HANDLED; }
+  aux::byte _[0];
 };
 struct none {
   void operator()() BOOST_MSM_LITE_NOEXCEPT {}
+  aux::byte _[0];
 };
 template <class>
 struct event {
@@ -1018,6 +1028,7 @@ struct transition<state<S1>, state<S2>, event<E>, always, none> {
         current_state, aux::get_id<typename SM::states_ids_t, -1, dst_state>(), state<src_state>{}, state<dst_state>{});
     return status::HANDLED;
   }
+  aux::byte _[0];
 };
 template <class...>
 struct transition_impl;
@@ -1216,14 +1227,14 @@ class sm {
   using initial_states_t = aux::apply_t<aux::unique_t, aux::apply_t<get_initial_states, transitions_t>>;
   using initial_states_ids_t = aux::apply_t<aux::type_id, initial_states_t>;
   using initial_but_not_history_states_t = aux::apply_t<get_history_states, transitions_t>;
-  using has_history_states = aux::integral_constant<bool, aux::get_size<initial_states_t>::value !=
-                                                              aux::get_size<initial_but_not_history_states_t>::value>;
+  using has_history_states =
+      aux::integral_constant<bool, aux::size<initial_states_t>::value != aux::size<initial_but_not_history_states_t>::value>;
   using sub_sms_t = aux::apply_t<get_sub_sms, states_t>;
   using events_t = aux::apply_t<aux::unique_t, aux::apply_t<get_events, transitions_t>>;
   using events_ids_t = aux::apply_t<aux::pool, events_t>;
   using deps_t = aux::apply_t<aux::pool, aux::join_t<get_sm<SM>, sub_sms_t, aux::apply_t<detail::merge_deps, transitions_t>>>;
   using has_deffer_actions = aux::is_base_of<aux::pool_type<defer>, deps_t>;
-  static constexpr auto regions = aux::get_size<initial_states_t>::value > 0 ? aux::get_size<initial_states_t>::value : 1;
+  static constexpr auto regions = aux::size<initial_states_t>::value > 0 ? aux::size<initial_states_t>::value : 1;
   static_assert(regions > 0, "At least one initial state is required");
 
   template <class... TDeps>
@@ -1263,17 +1274,18 @@ class sm {
 #if defined(__cpp_exceptions) || defined(__EXCEPTIONS)
     const auto handled = process_event_noexcept(event, aux::integral_constant<bool, is_noexcept>{});
 #else
-    const auto handled = process_event_impl<get_event_mapping_t<TEvent, mappings_t>>(event, states_t{}, aux::make_index_sequence<regions>{});
+    const auto handled =
+        process_event_impl<get_event_mapping_t<TEvent, mappings_t>>(event, states_t{}, aux::make_index_sequence<regions>{});
 #endif
     process_internal_event(anonymous{});
 
-    //if (handled == status::DEFFERED) {
-      //defer_.add(event);
+    // if (handled == status::DEFFERED) {
+    // defer_.add(event);
     //} else {
-      //const auto& defer = defer_.get();
-      //if (process_event_no_deffer(event) == status::HANDLED) {
-        //defer_.remove(event);
-      //}
+    // const auto& defer = defer_.get();
+    // if (process_event_no_deffer(event) == status::HANDLED) {
+    // defer_.remove(event);
+    //}
     //}
 
     return handled;
@@ -1511,7 +1523,7 @@ class sm {
   transitions_t transitions_;
 
  protected:
-  aux::byte current_state_[regions];
+  aux::conditional_t<(aux::size<states_t>::value > 0xFF), unsigned short, aux::byte> current_state_[regions];
 
  private:
   BOOST_MSM_LITE_THREAD_SAFE__(std::recursive_mutex mutex_;)
@@ -1601,8 +1613,8 @@ auto operator,(const T1 &t1, const T2 &t2) BOOST_MSM_LITE_NOEXCEPT {
 }
 template <class TEvent>
 detail::event<TEvent> event{};
-__attribute__((unused)) static auto on_entry = event<detail::on_entry>;
-__attribute__((unused)) static auto on_exit = event<detail::on_exit>;
+__attribute__((unused)) static const auto on_entry = event<detail::on_entry>;
+__attribute__((unused)) static const auto on_exit = event<detail::on_exit>;
 template <class T = detail::_>
 detail::event<detail::exception<T>> exception{};
 template <class T>

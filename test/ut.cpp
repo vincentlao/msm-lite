@@ -129,13 +129,13 @@ test tuple_same_types = [] {
 
 test pool_empty = [] {
   pool<> p;
-  static_expect(0 == get_size<decltype(p)>::value);
+  static_expect(0 == size<decltype(p)>::value);
   expect(0 == try_get<int>(p));
 };
 
 test pool_basic = [] {
   pool<int, double> p{42, 87.0};
-  static_expect(2 == get_size<decltype(p)>::value);
+  static_expect(2 == size<decltype(p)>::value);
   expect(42 == get<int>(p));
   expect(87.0 == get<double>(p));
   expect(0.f == try_get<float>(p));

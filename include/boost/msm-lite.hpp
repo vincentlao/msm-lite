@@ -260,20 +260,16 @@ struct pool_type {
 };
 struct init {};
 template <class T>
-auto try_get_impl(...) BOOST_MSM_LITE_NOEXCEPT {
+auto try_get(...) BOOST_MSM_LITE_NOEXCEPT {
   return aux::remove_reference_t<T>{};
 }
 template <class T>
-auto &try_get_impl(pool_type<T> *object) BOOST_MSM_LITE_NOEXCEPT {
+auto& try_get(pool_type<T> *object) BOOST_MSM_LITE_NOEXCEPT {
   return static_cast<pool_type<T> &>(*object).value;
 }
 template <class T>
-auto &try_get_impl(pool_type<T &> *object) BOOST_MSM_LITE_NOEXCEPT {
+auto& try_get(pool_type<T&> *object) BOOST_MSM_LITE_NOEXCEPT {
   return static_cast<pool_type<T &> &>(*object).value;
-}
-template <class T, class TPool>
-auto try_get(TPool &p) BOOST_MSM_LITE_NOEXCEPT -> decltype(try_get_impl<T>(&p)) {
-  return try_get_impl<T>(&p);
 }
 template <class T, class TPool>
 decltype(auto) get(TPool &p) BOOST_MSM_LITE_NOEXCEPT {
@@ -284,7 +280,7 @@ struct pool : pool_type<Ts>... {
   using boost_di_inject__ = aux::type_list<Ts...>;
   explicit pool(Ts... ts) BOOST_MSM_LITE_NOEXCEPT : pool_type<Ts>{ts}... {}
   template <class... TArgs>
-  pool(init &&, pool<TArgs...> &&p) BOOST_MSM_LITE_NOEXCEPT : pool_type<Ts>{aux::try_get<Ts>(p)}... {}
+  pool(init &&, pool<TArgs...> &&p) BOOST_MSM_LITE_NOEXCEPT : pool_type<Ts>{aux::try_get<Ts>(&p)}... {}
 };
 template <class>
 struct is_pool : aux::false_type {};
@@ -1067,7 +1063,7 @@ template <class TSM, class T, class... Ts>
 struct transition_sub_impl<TSM, T, Ts...> {
   template <class SM, class TEvent>
   static status execute(SM &self, const TEvent &event, aux::byte &current_state) BOOST_MSM_LITE_NOEXCEPT_IF(SM::is_noexcept) {
-    const auto handled = aux::try_get<TSM>(self.deps_).process_event(event);
+    const auto handled = aux::try_get<TSM>(&self.deps_).process_event(event);
     return handled != status::NOT_HANDLED ? handled : transition_impl<T, Ts...>::execute(self, event, current_state);
   }
 };
@@ -1075,7 +1071,7 @@ template <class TSM>
 struct transition_sub_impl<TSM> {
   template <class SM, class TEvent>
   static status execute(SM &self, const TEvent &event, aux::byte &) BOOST_MSM_LITE_NOEXCEPT_IF(SM::is_noexcept) {
-    return aux::try_get<TSM>(self.deps_).process_event(event);
+    return aux::try_get<TSM>(&self.deps_).process_event(event);
   }
 };
 template <class, class>
@@ -1253,11 +1249,11 @@ class sm {
 
   template <class... TDeps, BOOST_MSM_LITE_REQUIRES(dependable<TDeps...>::value)>
   explicit sm(TDeps &&... deps) BOOST_MSM_LITE_NOEXCEPT : deps_{aux::init{}, aux::pool<TDeps...>{deps...}},
-                                                          transitions_(aux::try_get<SM>(deps_).configure()) {
+                                                          transitions_(aux::try_get<SM>(&deps_).configure()) {
     initialize(initial_states_t{});
   }
 
-  explicit sm(deps_t &&deps) BOOST_MSM_LITE_NOEXCEPT : deps_(deps), transitions_(aux::try_get<SM>(deps_).configure()) {
+  explicit sm(deps_t &&deps) BOOST_MSM_LITE_NOEXCEPT : deps_(deps), transitions_(aux::try_get<SM>(&deps_).configure()) {
     initialize(initial_states_t{});
   }
 
@@ -1477,7 +1473,7 @@ class sm {
 
   template <class T, class... Ts>  // explicit
   void update_composite_states(const aux::type_list<Ts...> &, ...) BOOST_MSM_LITE_NOEXCEPT_IF(is_noexcept) {
-    auto &sm = aux::try_get<T>(deps_);
+    auto &sm = aux::try_get<T>(&deps_);
     int _[]{0, (sm.current_state_[sm.template get_region<Ts>()] = aux::get_id<typename T::states_ids_t, -1, Ts>(), 0)...};
     (void)_;
     // TODO
@@ -1486,7 +1482,7 @@ class sm {
   template <class T, class... Ts, class... THs>  // history states, no explicit
   void update_composite_states(const aux::type_list<> &, const aux::true_type &, const aux::type_list<THs...> &)
       BOOST_MSM_LITE_NOEXCEPT_IF(is_noexcept) {
-    auto &sm = aux::try_get<T>(deps_);
+    auto &sm = aux::try_get<T>(&deps_);
     int _[]{0, (sm.current_state_[aux::get_id<typename T::initial_states_ids_t, -1, THs>()] =
                     aux::get_id<typename T::states_ids_t, -1, THs>(),
                 0)...};
@@ -1495,7 +1491,7 @@ class sm {
 
   template <class T>  // just initials, no explicit
   void update_composite_states(const aux::type_list<> &, const aux::false_type &, ...) BOOST_MSM_LITE_NOEXCEPT_IF(is_noexcept) {
-    aux::try_get<T>(deps_).initialize(typename T::initial_states_t{});
+    aux::try_get<T>(&deps_).initialize(typename T::initial_states_t{});
   }
 
   template <class TState>

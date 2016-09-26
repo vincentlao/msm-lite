@@ -57,7 +57,7 @@ class euml_emulation {
 };
 
 int main() {
-  data d{42};
+  constd{42};
   msm::sm<euml_emulation> sm{d};
   assert(sm.is(idle));
   sm.process_event(e1{});

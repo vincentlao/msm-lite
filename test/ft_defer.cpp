@@ -6,6 +6,7 @@
 // http://www.boost.org/LICENSE_1_0.txt)
 //
 #include <iostream>
+#include <queue>
 #include "boost/msm-lite.hpp"
 
 namespace msm = boost::msm::lite;
@@ -38,7 +39,7 @@ test defer_and_transitions = [] {
     }
   };
 
-  msm::sm<c> sm;
+  msm::sm<c, msm::defer_queue<std::queue>> sm;
   sm.process_event(event1());
   sm.process_event(event1());
   sm.process_event(event2());

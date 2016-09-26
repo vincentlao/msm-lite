@@ -6,6 +6,7 @@
 // http://www.boost.org/LICENSE_1_0.txt)
 //
 #include <thread>
+#include <mutex>
 #include "boost/msm-lite.hpp"
 
 namespace msm = boost::msm::lite;
@@ -18,10 +19,10 @@ test process_the_same_event = [] {
     auto configure() {
       using namespace msm;
       // clang-format off
-    return make_transition_table(
-       *"idle"_s + event<e1> [([this]{ guard1_calls++; return true; })] / [this] { action1_calls++; } = "s1"_s
-      , "idle"_s + event<e2> [([this]{ guard2_calls++; return true; })] / [this] { action2_calls++; } = "s2"_s
-    );
+      return make_transition_table(
+         *"idle"_s + event<e1> [([this]{ guard1_calls++; return true; })] / [this] { action1_calls++; } = "s1"_s
+        , "idle"_s + event<e2> [([this]{ guard2_calls++; return true; })] / [this] { action2_calls++; } = "s2"_s
+      );
       // clang-format on
     }
 
@@ -32,7 +33,7 @@ test process_the_same_event = [] {
   };
 
   actions_guards ag;
-  msm::sm<actions_guards> sm{ag};
+  msm::sm<actions_guards, msm::thread_safe<std::mutex>> sm{ag};
   std::thread t1{[&] { sm.process_event(e1{}); }};
   std::thread t2{[&] { sm.process_event(e2{}); }};
   t1.join();
@@ -48,15 +49,15 @@ test process_event_reentrant = [] {
     auto configure() {
       using namespace msm;
       // clang-format off
-    return make_transition_table(
-       *"idle"_s + event<e1> / process_event(e2{})
-      , "idle"_s + event<e2> = "s2"_s
-    );
+      return make_transition_table(
+         *"idle"_s + event<e1> / process_event(e2{})
+        , "idle"_s + event<e2> = "s2"_s
+      );
       // clang-format on
     }
   };
 
-  msm::sm<c> sm;
+  msm::sm<c, msm::thread_safe<std::recursive_mutex>> sm;
   // Hangs forever awaiting lock if mutex is not reentrant.
   sm.process_event(e1{});
 };

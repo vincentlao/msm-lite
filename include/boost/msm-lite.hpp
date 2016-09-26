@@ -9,12 +9,6 @@
 #error "Boost.MSM-lite requires C++14 support (Clang-3.4+, GCC-5.1+, MSVC-2015+)"
 #else
 #define BOOST_MSM_LITE_VERSION 1'0'1
-#if defined(BOOST_MSM_LITE_THREAD_SAFE)
-#include <mutex>
-#define BOOST_MSM_LITE_THREAD_SAFE__(...) __VA_ARGS__
-#else
-#define BOOST_MSM_LITE_THREAD_SAFE__(...)
-#endif
 #if !defined(BOOST_MSM_LITE_LOG)
 #define BOOST_MSM_LITE_LOG(...)
 #else
@@ -461,9 +455,6 @@ template <class>
 struct is_sm : aux::false_type {};
 template <class T>
 struct is_sm<sm<T>> : aux::true_type {};
-struct fsm {
-  auto configure() BOOST_MSM_LITE_NOEXCEPT { return aux::pool<>{}; }
-};
 struct defer {
   template <class T>
   void operator()(const T &) BOOST_MSM_LITE_NOEXCEPT {}
@@ -514,6 +505,11 @@ struct always {
 struct none {
   void operator()() BOOST_MSM_LITE_NOEXCEPT {}
   aux::byte _[0];
+};
+struct fsm {
+  using sm = fsm;
+  using policy = none;
+  auto configure() BOOST_MSM_LITE_NOEXCEPT { return aux::pool<>{}; }
 };
 template <class>
 struct event {
@@ -1198,19 +1194,22 @@ using get_initial_states =
 template <class... Ts>
 using get_history_states =
     aux::join_t<aux::conditional_t<!Ts::history && Ts::initial, aux::type_list<typename Ts::src_state>, aux::type_list<>>...>;
-template <class T, class U = T>
-using get_sm = aux::conditional_t<aux::is_trivially_constructible<T>::value, aux::type_list<U>, aux::type_list<U &>>;
 template <class T>
 using get_base_sm = aux::conditional_t<aux::is_trivially_constructible<T>::value, aux::type_list<>, aux::type_list<T &>>;
+template<class SM, class TPolicy>
+struct sm_policy {
+  using sm = SM;
+  using policy = TPolicy;
+};
 template <class>
 struct get_sub_sm : aux::type_list<> {};
 template <class T>
-struct get_sub_sm<sm<T>> : get_sm<T, sm<T>> {};
+struct get_sub_sm<sm<T>> : aux::conditional_t<aux::is_trivially_constructible<typename T::sm>::value, aux::type_list<sm<T>>, aux::type_list<sm<T>&>> {};
 template <class... Ts>
 using get_sub_sms = aux::join_t<typename get_sub_sm<Ts>::type...>;
 template <class... Ts>
 using merge_deps = aux::apply_t<aux::unique_t, aux::join_t<typename Ts::deps...>>;
-template <class SM>
+template <class TSM>
 class sm {
   template <class>
   friend class sm;
@@ -1223,6 +1222,8 @@ class sm {
   template <class...>
   friend struct transition_sub_impl;
 
+  using SM = typename TSM::sm;
+  using synch_t = typename TSM::policy;
   using transitions_t = decltype(aux::declval<SM>().configure());
   using mappings_t = detail::mappings_t<transitions_t>;
   using states_t = aux::apply_t<aux::unique_t, aux::apply_t<get_states, transitions_t>>;
@@ -1236,7 +1237,7 @@ class sm {
   using events_t = aux::apply_t<aux::unique_t, aux::apply_t<get_events, transitions_t>>;
   using events_ids_t = aux::apply_t<aux::pool, events_t>;
   using deps_t = aux::apply_t<aux::pool, aux::join_t<get_base_sm<SM>, sub_sms_t, aux::apply_t<detail::merge_deps, transitions_t>>>;
-  using has_deffer_actions = aux::is_base_of<aux::pool_type<defer>, deps_t>;
+  //using has_deffer_actions = aux::is_base_of<aux::pool_type<defer>, deps_t>;
   static constexpr auto regions = aux::size<initial_states_t>::value > 0 ? aux::size<initial_states_t>::value : 1;
   static_assert(regions > 0, "At least one initial state is required");
 
@@ -1372,7 +1373,7 @@ class sm {
       BOOST_MSM_LITE_NOEXCEPT_IF(is_noexcept) {
     static status (*dispatch_table[sizeof...(TStates)])(
         sm &, const TEvent &, aux::byte &) = {&get_state_mapping_t<TStates, TMappings>::template execute<sm, TEvent>...};
-    BOOST_MSM_LITE_THREAD_SAFE__(std::lock_guard<std::recursive_mutex> guard{mutex_});
+    const auto lock = create_lock(aux::type<synch_t>{}); (void)lock;
     return dispatch_table[current_state_[0]](*this, event, current_state_[0]);
   }
 
@@ -1381,7 +1382,7 @@ class sm {
       BOOST_MSM_LITE_NOEXCEPT_IF(is_noexcept) {
     static status (*dispatch_table[sizeof...(TStates)])(
         sm &, const TEvent &, aux::byte &) = {&get_state_mapping_t<TStates, TMappings>::template execute<sm, TEvent>...};
-    BOOST_MSM_LITE_THREAD_SAFE__(std::lock_guard<std::recursive_mutex> guard{mutex_});
+    const auto lock = create_lock(aux::type<synch_t>{}); (void)lock;
     return dispatch_table[current_state](*this, event, current_state);
   }
 
@@ -1391,7 +1392,7 @@ class sm {
     static status (*dispatch_table[sizeof...(TStates)])(
         sm &, const TEvent &, aux::byte &) = {&get_state_mapping_t<TStates, TMappings>::template execute<sm, TEvent>...};
     auto handled = false;
-    BOOST_MSM_LITE_THREAD_SAFE__(std::lock_guard<std::recursive_mutex> guard{mutex_});
+    const auto lock = create_lock(aux::type<synch_t>{}); (void)lock;
     int _[]{0, (handled |= dispatch_table[current_state_[Ns]](*this, event, current_state_[Ns]) != status::NOT_HANDLED, 0)...};
     (void)_;
     return handled ? status::HANDLED : status::NOT_HANDLED;
@@ -1522,6 +1523,26 @@ class sm {
     return region;
   }
 
+  auto create_lock(const aux::type<detail::none>&) {
+    return detail::none{};
+  }
+
+  template<class T>
+  auto create_lock(const aux::type<T>&) {
+    struct lock_guard {
+      explicit lock_guard(synch_t& synch) : synch_(synch) {
+        synch_.lock();
+      }
+
+      ~lock_guard() {
+        synch_.unlock();
+      }
+
+      synch_t& synch_;
+    };
+    return lock_guard{synch_};
+  }
+
   deps_t deps_;
   transitions_t transitions_;
 
@@ -1529,7 +1550,7 @@ class sm {
   aux::conditional_t<(aux::size<states_t>::value > 0xFF), unsigned short, aux::byte> current_state_[regions];
 
  private:
-  BOOST_MSM_LITE_THREAD_SAFE__(std::recursive_mutex mutex_;)
+  synch_t synch_;
 };
 template <class TEvent = void>
 struct dispatch_event_impl {
@@ -1580,17 +1601,17 @@ auto make_dispatch_table(sm<SM> &fsm, const aux::index_sequence<Ns...> &) BOOST_
 }
 }  // detail
 namespace testing {
-template <class T>
-class sm : public detail::sm<T> {
-  using states_ids_t = aux::apply_t<aux::type_id, typename detail::sm<T>::states>;
+template <class T, class TPolicy = detail::none>
+class sm : public detail::sm<detail::sm_policy<T, TPolicy>> {
+  using states_ids_t = aux::apply_t<aux::type_id, typename detail::sm<detail::sm_policy<T, TPolicy>>::states>;
 
  public:
-  using detail::sm<T>::sm;
+  using detail::sm<detail::sm_policy<T, TPolicy>>::sm;
 
   template <class... TStates>
   void set_current_states(const detail::state<TStates> &...) BOOST_MSM_LITE_NOEXCEPT {
     auto region = 0, i = region;
-    int _[]{0, (region = i, detail::sm<T>::current_state_[region] = aux::get_id<states_ids_t, 0, TStates>(), ++i, 0)...};
+    int _[]{0, (region = i, detail::sm<detail::sm_policy<T, TPolicy>>::current_state_[region] = aux::get_id<states_ids_t, 0, TStates>(), ++i, 0)...};
     (void)_;
   }
 };
@@ -1632,6 +1653,8 @@ auto operator""_t() BOOST_MSM_LITE_NOEXCEPT {
   return event<aux::string<Chrs...>>;
 }
 #endif
+template<class T>
+using thread_safe = T;
 __attribute__((unused)) static detail::state<detail::terminate_state> X;
 __attribute__((unused)) static detail::history_state H;
 __attribute__((unused)) static detail::process_event process_event;
@@ -1641,8 +1664,8 @@ template <class... Ts, BOOST_MSM_LITE_REQUIRES(aux::is_same<aux::bool_list<aux::
 auto make_transition_table(Ts... ts) BOOST_MSM_LITE_NOEXCEPT {
   return aux::pool<Ts...>{ts...};
 }
-template <class T, BOOST_MSM_LITE_REQUIRES(concepts::configurable<T>::value)>
-using sm = detail::sm<T>;
+template <class T, class TPolicy = detail::none, BOOST_MSM_LITE_REQUIRES(concepts::configurable<T>::value)>
+using sm = detail::sm<detail::sm_policy<T, TPolicy>>;
 template <class TEvent, int EventRangeBegin, int EventRangeEnd, class SM,
           BOOST_MSM_LITE_REQUIRES(concepts::dispatchable<TEvent, typename sm<SM>::events>::value)>
 auto make_dispatch_table(sm<SM> &fsm) BOOST_MSM_LITE_NOEXCEPT {

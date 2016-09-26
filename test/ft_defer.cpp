@@ -74,7 +74,7 @@ test defer_and_anonymous = [] {
     }
   };
 
-  msm::sm<c> sm;
+  msm::sm<c, msm::defer_queue<std::queue>> sm;
   sm.process_event(event1());
   sm.process_event(event2());
 

@@ -33,7 +33,7 @@ test process_the_same_event = [] {
   };
 
   actions_guards ag;
-  msm::sm<actions_guards, msm::thread_safe<std::mutex>> sm{ag};
+  msm::sm<actions_guards&, msm::thread_safe<std::mutex>> sm{ag};
   std::thread t1{[&] { sm.process_event(e1{}); }};
   std::thread t2{[&] { sm.process_event(e2{}); }};
   t1.join();

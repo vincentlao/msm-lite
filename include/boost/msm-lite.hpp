@@ -117,8 +117,6 @@ template <class T, class... TArgs>
 using is_constructible = decltype(test_is_constructible<T, TArgs...>(0));
 #endif
 template <class T>
-using is_trivially_constructible = integral_constant<bool, __is_trivially_constructible(T)>;
-template <class T>
 struct remove_reference {
   using type = T;
 };
@@ -458,14 +456,10 @@ template <class, class>
 struct transition_ea;
 template <class>
 class sm;
-template <class>
-struct is_sm : aux::false_type {};
-template <class T>
-struct is_sm<sm<T>> : aux::true_type {};
 struct defer {
   template <class SM, class T>
-  void operator()(sm<SM>&, const T &) BOOST_MSM_LITE_NOEXCEPT {
-    //static_assert(aux::is_same<typename sm<SM>::template defer_queue_t<T>, no_policy>::value, "");
+  void operator()(sm<SM> &, const T &) BOOST_MSM_LITE_NOEXCEPT {
+    // static_assert(aux::is_same<typename sm<SM>::template defer_queue_t<T>, no_policy>::value, "");
   }
 };
 struct process_event {
@@ -485,12 +479,12 @@ struct process_event {
   }
 };
 enum class status { HANDLED, NOT_HANDLED, DEFFERED };
-template <class>
+template <class T>
 inline status ret_status() {
   return status::HANDLED;
 }
 template <>
-inline status ret_status<defer>() {
+inline status ret_status<aux::zero_wrapper<defer>>() {
   return status::DEFFERED;
 }
 struct _ {};
@@ -1207,12 +1201,20 @@ using get_initial_states =
 template <class... Ts>
 using get_history_states =
     aux::join_t<aux::conditional_t<!Ts::history && Ts::initial, aux::type_list<typename Ts::src_state>, aux::type_list<>>...>;
-template <class T>
-using get_base_sm = aux::conditional_t<aux::is_trivially_constructible<T>::value, aux::type_list<>, aux::type_list<T &>>;
 template <class>
 no_policy get_policy(...);
 template <class T, class TPolicy>
 TPolicy get_policy(aux::pair<T, TPolicy> *);
+template<template<class> class, class T>
+struct sm_inject {
+  using sm = T;
+  using all = aux::type_list<T>;
+};
+template<template<class> class TRebind, class T, class... Ts>
+struct sm_inject<TRebind, T(Ts...)> {
+  using sm = T;
+  using all = aux::join_t<aux::type_list<T, Ts...>, typename TRebind<Ts>::deps...>;
+};
 template <class SM, class... TPolicies>
 struct sm_policy {
   using sm = SM;
@@ -1220,15 +1222,14 @@ struct sm_policy {
   using exception_safe_policy = decltype(get_policy<detail::exception_safe_policy>((aux::inherit<TPolicies...> *)0));
   using defer_queue_policy = decltype(get_policy<defer_queue_policy>((aux::inherit<TPolicies...> *)0));
 };
-template <class>
+template <class, class = void>
 struct get_sub_sm : aux::type_list<> {};
 template <class T>
-struct get_sub_sm<sm<T>> : aux::conditional_t<aux::is_trivially_constructible<typename T::sm>::value, aux::type_list<sm<T>>,
-                                              aux::type_list<sm<T> &>> {};
+struct get_sub_sm<T, aux::enable_if_t<concepts::configurable<T>::value>> : aux::type_list<T> {};
 template <class... Ts>
 using get_sub_sms = aux::join_t<typename get_sub_sm<Ts>::type...>;
 template <class... Ts>
-using merge_deps = aux::apply_t<aux::unique_t, aux::join_t<typename Ts::deps...>>;
+using merge_deps = aux::join_t<typename Ts::deps...>;
 template <class TSM>
 class sm {
   template <class>
@@ -1241,12 +1242,16 @@ class sm {
   friend struct transition_impl;
   template <class...>
   friend struct transition_sub_impl;
+  template<template<class> class, class>
+  friend struct sm_inject;
 
-  using SM = typename TSM::sm;
+  template<class T>
+  using rebind = sm<sm_policy<T>>;
+  using sm_t = typename sm_inject<rebind, typename TSM::sm>::sm;
+  using sm_raw_t = aux::remove_reference_t<sm_t>;
   using thread_safety_t = typename TSM::thread_safety_policy::type;
-  template <class T>
-  using defer_queue_t = typename TSM::defer_queue_policy::template rebind<T>;
-  using transitions_t = decltype(aux::declval<SM>().configure());
+  template <class T> using defer_queue_t = typename TSM::defer_queue_policy::template rebind<T>;
+  using transitions_t = decltype(aux::declval<sm_raw_t>().configure());
   using mappings_t = detail::mappings_t<transitions_t>;
   using states_t = aux::apply_t<aux::unique_t, aux::apply_t<get_states, transitions_t>>;
   using states_ids_t = aux::apply_t<aux::type_id, states_t>;
@@ -1258,8 +1263,8 @@ class sm {
   using sub_sms_t = aux::apply_t<get_sub_sms, states_t>;
   using events_t = aux::apply_t<aux::unique_t, aux::apply_t<get_events, transitions_t>>;
   using events_ids_t = aux::apply_t<aux::pool, events_t>;
-  using deps_t =
-      aux::apply_t<aux::pool, aux::join_t<get_base_sm<SM>, sub_sms_t, aux::apply_t<detail::merge_deps, transitions_t>>>;
+  using deps = aux::apply_t<aux::unique_t, aux::join_t<typename sm_inject<rebind, typename TSM::sm>::all, aux::apply_t<detail::merge_deps, transitions_t>>>;
+  using deps_t = aux::apply_t<aux::pool, deps>;
   static constexpr auto regions = aux::size<initial_states_t>::value > 0 ? aux::size<initial_states_t>::value : 1;
   static_assert(regions > 0, "At least one initial state is required");
 
@@ -1277,26 +1282,27 @@ class sm {
 
 #if defined(__cpp_exceptions) || defined(__EXCEPTIONS)
   using exceptions = aux::apply_t<aux::unique_t, aux::apply_t<get_exceptions, events_t>>;
-  static constexpr auto is_noexcept = BOOST_MSM_LITE_NOEXCEPT_IF(aux::declval<SM>().configure());
+  static constexpr auto is_noexcept = BOOST_MSM_LITE_NOEXCEPT_IF(aux::declval<sm_raw_t>().configure());
 #endif
 
   sm(sm &&) = default;
   sm(const sm &) = delete;
   sm &operator=(const sm &) = delete;
 
+  template<class> struct q;
   template <class... TDeps, BOOST_MSM_LITE_REQUIRES(dependable<TDeps...>::value)>
   explicit sm(TDeps &&... deps) BOOST_MSM_LITE_NOEXCEPT : deps_{aux::init{}, aux::pool<TDeps...>{deps...}},
-                                                          transitions_(aux::try_get<SM>(&deps_).configure()) {
+                                                          transitions_(aux::try_get<sm_t>(&deps_).configure()) {
     initialize(initial_states_t{});
   }
 
-  explicit sm(deps_t &&deps) BOOST_MSM_LITE_NOEXCEPT : deps_(deps), transitions_(aux::try_get<SM>(&deps_).configure()) {
+  explicit sm(deps_t &&deps) BOOST_MSM_LITE_NOEXCEPT : deps_(deps), transitions_(aux::try_get<sm_t>(&deps_).configure()) {
     initialize(initial_states_t{});
   }
 
   template <class TEvent>
   status process_event(const TEvent &event) BOOST_MSM_LITE_NOEXCEPT_IF(is_noexcept) {
-    BOOST_MSM_LITE_LOG(process_event, SM, event);
+    BOOST_MSM_LITE_LOG(process_event, sm_raw_t, event);
 #if defined(__cpp_exceptions) || defined(__EXCEPTIONS)
     const auto handled = process_event_noexcept(event, aux::integral_constant<bool, is_noexcept>{});
 #else
@@ -1351,7 +1357,7 @@ class sm {
 
   template <class TEvent>
   status process_event_no_deffer(const TEvent &event) BOOST_MSM_LITE_NOEXCEPT_IF(is_noexcept) {
-    BOOST_MSM_LITE_LOG(process_event, SM, event);
+    BOOST_MSM_LITE_LOG(process_event, sm_raw_t, event);
 #if defined(__cpp_exceptions) || defined(__EXCEPTIONS)
     return process_event_noexcept(event, aux::integral_constant<bool, is_noexcept>{});
 #else
@@ -1364,7 +1370,7 @@ class sm {
 
   template <class TEvent, BOOST_MSM_LITE_REQUIRES(aux::is_base_of<aux::pool_type<TEvent>, events_ids_t>::value)>
   status process_internal_event(const TEvent &event) BOOST_MSM_LITE_NOEXCEPT_IF(is_noexcept) {
-    BOOST_MSM_LITE_LOG(process_event, SM, event);
+    BOOST_MSM_LITE_LOG(process_event, sm_raw_t, event);
 #if defined(__cpp_exceptions) || defined(__EXCEPTIONS)
     return process_event_noexcept(event, aux::integral_constant<bool, is_noexcept>{});
 #else
@@ -1374,7 +1380,7 @@ class sm {
 
   template <class TEvent, BOOST_MSM_LITE_REQUIRES(aux::is_base_of<aux::pool_type<TEvent>, events_ids_t>::value)>
   status process_internal_event(const TEvent &event, aux::byte &current_state) BOOST_MSM_LITE_NOEXCEPT_IF(is_noexcept) {
-    BOOST_MSM_LITE_LOG(process_event, SM, event);
+    BOOST_MSM_LITE_LOG(process_event, sm_raw_t, event);
 #if defined(__cpp_exceptions) || defined(__EXCEPTIONS)
     return process_event_noexcept(event, current_state, aux::integral_constant<bool, is_noexcept>{});
 #else
@@ -1460,9 +1466,9 @@ class sm {
     if (handled == status::DEFFERED) {
       defer_.push(event);
     } else {
-      if (!defer_.empty() && defer_.front().template apply<detail::status>([this](const auto &event) {
-            return process_event_no_deffer(event);
-          }) == status::HANDLED) {
+      while (!defer_.empty() && defer_.front().template apply<detail::status>([this](const auto &event) {
+        return process_event_no_deffer(event);
+      }) == status::HANDLED) {
         defer_.pop();
       }
     }
@@ -1502,7 +1508,7 @@ class sm {
   void update_current_state_impl(aux::byte &current_state, const aux::byte &new_state, const TSrcState &src_state,
                                  const TDstState &dst_state) BOOST_MSM_LITE_NOEXCEPT_IF(is_noexcept) {
     process_internal_event(on_exit{}, current_state);
-    BOOST_MSM_LITE_LOG(state_change, SM, src_state, dst_state);
+    BOOST_MSM_LITE_LOG(state_change, sm_raw_t, src_state, dst_state);
     (void)src_state;
     (void)dst_state;
     current_state = new_state;
@@ -1513,7 +1519,7 @@ class sm {
   void update_current_state_impl(aux::byte &current_state, const aux::byte &new_state, const TSrcState &src_state,
                                  const state<sm<T>> &dst_state) BOOST_MSM_LITE_NOEXCEPT_IF(is_noexcept) {
     process_internal_event(on_exit{}, current_state);
-    BOOST_MSM_LITE_LOG(state_change, SM, src_state, dst_state);
+    BOOST_MSM_LITE_LOG(state_change, sm_raw_t, src_state, dst_state);
     (void)src_state;
     (void)dst_state;
     current_state = new_state;
@@ -1674,11 +1680,11 @@ __attribute__((unused)) static const auto on_exit = event<detail::on_exit>;
 template <class T = detail::_>
 detail::event<detail::exception<T>> exception{};
 template <class T>
-using state = detail::state<T>;
+detail::state<T> state{};
 #if !defined(_MSC_VER)
 template <class T, T... Chrs>
 auto operator""_s() BOOST_MSM_LITE_NOEXCEPT {
-  return state<aux::string<Chrs...>>{};
+  return detail::state<aux::string<Chrs...>>{};
 }
 template <class T, T... Chrs>
 auto operator""_t() BOOST_MSM_LITE_NOEXCEPT {

@@ -279,9 +279,7 @@ struct pool : pool_type<Ts>... {
   explicit pool(Ts... ts) BOOST_MSM_LITE_NOEXCEPT : pool_type<Ts>{ts}... {}
   template <class... TArgs>
   pool(init &&, pool<TArgs...> &&p) BOOST_MSM_LITE_NOEXCEPT : pool_type<Ts>{aux::try_get<Ts>(&p)}... {}
-
-  template <class... TArgs>
-  pool(pool<TArgs...> &p) BOOST_MSM_LITE_NOEXCEPT : pool_type<Ts>{aux::try_get<Ts>(&p)}... {}
+  pool(){}
 };
 template <>
 struct pool<> {
@@ -373,7 +371,7 @@ struct zero_wrapper_impl<TExpr, aux::type_list<TArgs...>> {
 template <class TExpr>
 struct zero_wrapper<TExpr, void_t<decltype(+declval<TExpr>())>>
     : zero_wrapper_impl<TExpr, aux::function_traits_t<decltype(&TExpr::operator())>> {
-  explicit zero_wrapper(const TExpr &) {}
+  explicit zero_wrapper(...) {}
 };
 }  // aux
 namespace detail {
@@ -384,7 +382,7 @@ struct terminate_state;
 namespace concepts {
 #define BOOST_MSM_LITE_REQUIRES(...) typename aux::enable_if<__VA_ARGS__, int>::type = 0
 template <class T>
-decltype(aux::declval<T>().configure()) configurable_impl(int);
+decltype(aux::declval<T>()()) configurable_impl(int);
 template <class>
 void configurable_impl(...);
 template <class T>
@@ -459,6 +457,8 @@ template <class, class>
 struct transition_ea;
 template <class>
 class sm;
+template <class, class>
+class sm_impl;
 struct defer {
   template <class SM, class T>
   void operator()(sm<SM> &, const T &) BOOST_MSM_LITE_NOEXCEPT {
@@ -519,7 +519,7 @@ struct fsm {
   using sm = fsm;
   using thread_safety_policy = no_policy;
   using defer_queue_policy = no_policy;
-  auto configure() BOOST_MSM_LITE_NOEXCEPT { return aux::pool<>{}; }
+  auto operator()() BOOST_MSM_LITE_NOEXCEPT { return aux::pool<>{}; }
 };
 template <class>
 struct event {
@@ -1081,7 +1081,7 @@ template <class TSM, class T, class... Ts>
 struct transition_sub_impl<TSM, T, Ts...> {
   template <class SM, class TEvent>
   static status execute(SM &self, const TEvent &event, aux::byte &current_state) BOOST_MSM_LITE_NOEXCEPT_IF(SM::is_noexcept) {
-    const auto handled = aux::try_get<TSM>(&self.sub_sms_).process_event(event);
+    const auto handled = aux::try_get<sm_impl<typename TSM::type, SM>>(&self.sub_sms_).process_event(event);
     return handled != status::NOT_HANDLED ? handled : transition_impl<T, Ts...>::execute(self, event, current_state);
   }
 };
@@ -1089,7 +1089,7 @@ template <class TSM>
 struct transition_sub_impl<TSM> {
   template <class SM, class TEvent>
   static status execute(SM &self, const TEvent &event, aux::byte &) BOOST_MSM_LITE_NOEXCEPT_IF(SM::is_noexcept) {
-    return aux::try_get<TSM>(&self.sub_sms_).process_event(event);
+    return aux::try_get<sm_impl<typename TSM::type, SM>>(&self.sub_sms_).process_event(event);
   }
 };
 template <class, class>
@@ -1228,7 +1228,7 @@ struct sm_policy {
 template <class>
 struct get_sub_sm : aux::type_list<> {};
 template <class T>
-struct get_sub_sm<sm<T>> : aux::type_list<sm<T>> {};
+struct get_sub_sm<sm<T>> : aux::type_list<T> {};
 template <class... Ts>
 using get_sub_sms = aux::join_t<typename get_sub_sm<Ts>::type...>;
 template <class... Ts>
@@ -1239,8 +1239,9 @@ struct is_required : aux::false_type {
 };
 template<class T, class TDeps>
 struct is_required<T, TDeps, aux::enable_if_t<aux::is_base_of<aux::pool_type<T>, TDeps>::value>> : aux::true_type {};
-template <class TSM>
-class sm {
+template <class TSM, class CRTP>
+class sm_impl {
+public:
   template <class>
   friend class sm;
   template <class>
@@ -1260,7 +1261,7 @@ class sm {
   using sm_raw_t = aux::remove_reference_t<sm_t>;
   using thread_safety_t = typename TSM::thread_safety_policy::type;
   template <class T> using defer_queue_t = typename TSM::defer_queue_policy::template rebind<T>;
-  using transitions_t = decltype(aux::declval<sm_raw_t>().configure());
+  using transitions_t = decltype(aux::declval<sm_raw_t>()());
   using mappings_t = detail::mappings_t<transitions_t>;
   using states_t = aux::apply_t<aux::unique_t, aux::apply_t<get_states, transitions_t>>;
   using states_ids_t = aux::apply_t<aux::type_id, states_t>;
@@ -1269,17 +1270,11 @@ class sm {
   using initial_but_not_history_states_t = aux::apply_t<get_history_states, transitions_t>;
   using has_history_states =
       aux::integral_constant<bool, aux::size<initial_states_t>::value != aux::size<initial_but_not_history_states_t>::value>;
-  using sub_sms_t = aux::apply_t<aux::pool, aux::apply_t<get_sub_sms, states_t>>;
   using events_t = aux::apply_t<aux::unique_t, aux::apply_t<get_events, transitions_t>>;
   using events_ids_t = aux::apply_t<aux::pool, events_t>;
   using deps = aux::apply_t<aux::unique_t, aux::join_t<typename sm_inject<rebind, typename TSM::sm>::all, aux::apply_t<detail::merge_deps, transitions_t>>>;
-  using deps_t = aux::apply_t<aux::pool, deps>;
   static constexpr auto regions = aux::size<initial_states_t>::value > 0 ? aux::size<initial_states_t>::value : 1;
   static_assert(regions > 0, "At least one initial state is required");
-
-  template <class... TDeps>
-  using dependable = aux::is_same<aux::bool_list<aux::always<TDeps>::value...>,
-                                  aux::bool_list<is_required<TDeps, deps_t>::value...>>;
 
   template <class... TStates>
   using get_ids = aux::index_sequence<aux::get_id<states_ids_t, -1, TStates>()...>;
@@ -1289,25 +1284,14 @@ class sm {
   using events = aux::apply_t<aux::unique_t, aux::apply_t<get_all_events, transitions_t>>;
   using transitions = aux::apply_t<aux::type_list, transitions_t>;
 
+  sm_impl() BOOST_MSM_LITE_NOEXCEPT : transitions_(aux::try_get<sm_t>(&static_cast<CRTP*>(this)->sub_sms_)()) {
+    initialize(initial_states_t{});
+  }
+
 #if defined(__cpp_exceptions) || defined(__EXCEPTIONS)
   using exceptions = aux::apply_t<aux::unique_t, aux::apply_t<get_exceptions, events_t>>;
-  static constexpr auto is_noexcept = BOOST_MSM_LITE_NOEXCEPT_IF(aux::declval<sm_raw_t>().configure());
+  static constexpr auto is_noexcept = BOOST_MSM_LITE_NOEXCEPT_IF(aux::declval<sm_raw_t>()());
 #endif
-
-  sm(sm &&) = default;
-  sm(const sm &) = delete;
-  sm &operator=(const sm &) = delete;
-
-  template <class... TDeps>//, BOOST_MSM_LITE_REQUIRES(dependable<TDeps...>::value)>
-  explicit sm(TDeps &&... deps) BOOST_MSM_LITE_NOEXCEPT : deps_{aux::init{}, aux::pool<TDeps...>{deps...}},
-                                                          sub_sms_(deps_),
-                                                          transitions_(aux::try_get<sm_t>(&sub_sms_).configure()) {
-    initialize(initial_states_t{});
-  }
-
-  explicit sm(deps_t &deps) BOOST_MSM_LITE_NOEXCEPT : deps_(deps), transitions_(aux::try_get<sm_t>(&deps_).configure()) {
-    initialize(initial_states_t{});
-  }
 
   template <class TEvent>
   status process_event(const TEvent &event) BOOST_MSM_LITE_NOEXCEPT_IF(is_noexcept) {
@@ -1352,7 +1336,8 @@ class sm {
     return result;
   }
 
- private:
+ //private:
+ public:
   template <class... TStates>
   void initialize(const aux::type_list<TStates...> &) BOOST_MSM_LITE_NOEXCEPT {
     auto region = 0, i = region;
@@ -1401,31 +1386,31 @@ class sm {
   status process_event_impl(const TEvent &event, const aux::type_list<TStates...> &, const aux::index_sequence<0> &)
       BOOST_MSM_LITE_NOEXCEPT_IF(is_noexcept) {
     static status (*dispatch_table[sizeof...(TStates)])(
-        sm &, const TEvent &, aux::byte &) = {&get_state_mapping_t<TStates, TMappings>::template execute<sm, TEvent>...};
+        CRTP &, const TEvent &, aux::byte &) = {&get_state_mapping_t<TStates, TMappings>::template execute<CRTP, TEvent>...};
     const auto lock = create_lock(aux::type<thread_safety_t>{});
     (void)lock;
-    return dispatch_table[current_state_[0]](*this, event, current_state_[0]);
+    return dispatch_table[current_state_[0]](static_cast<CRTP&>(*this), event, current_state_[0]);
   }
 
   template <class TMappings, class TEvent, class... TStates>
   status process_event_impl(const TEvent &event, const aux::type_list<TStates...> &, aux::byte &current_state)
       BOOST_MSM_LITE_NOEXCEPT_IF(is_noexcept) {
     static status (*dispatch_table[sizeof...(TStates)])(
-        sm &, const TEvent &, aux::byte &) = {&get_state_mapping_t<TStates, TMappings>::template execute<sm, TEvent>...};
+        CRTP &, const TEvent &, aux::byte &) = {&get_state_mapping_t<TStates, TMappings>::template execute<CRTP, TEvent>...};
     const auto lock = create_lock(aux::type<thread_safety_t>{});
     (void)lock;
-    return dispatch_table[current_state](*this, event, current_state);
+    return dispatch_table[current_state](static_cast<CRTP&>(*this), event, current_state);
   }
 
   template <class TMappings, class TEvent, class... TStates, int... Ns>
   status process_event_impl(const TEvent &event, const aux::type_list<TStates...> &, const aux::index_sequence<Ns...> &)
       BOOST_MSM_LITE_NOEXCEPT_IF(is_noexcept) {
     static status (*dispatch_table[sizeof...(TStates)])(
-        sm &, const TEvent &, aux::byte &) = {&get_state_mapping_t<TStates, TMappings>::template execute<sm, TEvent>...};
+        CRTP &, const TEvent &, aux::byte &) = {&get_state_mapping_t<TStates, TMappings>::template execute<CRTP, TEvent>...};
     auto handled = false;
     const auto lock = create_lock(aux::type<thread_safety_t>{});
     (void)lock;
-    int _[]{0, (handled |= dispatch_table[current_state_[Ns]](*this, event, current_state_[Ns]) != status::NOT_HANDLED, 0)...};
+    int _[]{0, (handled |= dispatch_table[current_state_[Ns]](static_cast<CRTP&>(*this), event, current_state_[Ns]) != status::NOT_HANDLED, 0)...};
     (void)_;
     return handled ? status::HANDLED : status::NOT_HANDLED;
   }
@@ -1486,14 +1471,14 @@ class sm {
   template <class TVisitor, class... TStates>
   void visit_current_states_impl(const TVisitor &visitor, const aux::type_list<TStates...> &,
                                  const aux::index_sequence<0> &) const BOOST_MSM_LITE_NOEXCEPT_IF(is_noexcept) {
-    static void (*dispatch_table[sizeof...(TStates)])(const TVisitor &) = {&sm::visit_state<TVisitor, TStates>...};
+    static void (*dispatch_table[sizeof...(TStates)])(const TVisitor &) = {&sm_impl::visit_state<TVisitor, TStates>...};
     dispatch_table[current_state_[0]](visitor);
   }
 
   template <class TVisitor, class... TStates, int... Ns>
   void visit_current_states_impl(const TVisitor &visitor, const aux::type_list<TStates...> &,
                                  const aux::index_sequence<Ns...> &) const BOOST_MSM_LITE_NOEXCEPT {
-    static void (*dispatch_table[sizeof...(TStates)])(const TVisitor &) = {&sm::visit_state<TVisitor, TStates>...};
+    static void (*dispatch_table[sizeof...(TStates)])(const TVisitor &) = {&sm_impl::visit_state<TVisitor, TStates>...};
     int _[]{0, (dispatch_table[current_state_[Ns]](visitor), 0)...};
     (void)_;
   }
@@ -1533,13 +1518,13 @@ class sm {
     (void)dst_state;
     current_state = new_state;
     process_internal_event(on_entry{}, current_state);
-    update_composite_states<sm<T>>(TExplicit{}, typename sm<T>::has_history_states{},
+    update_composite_states<sm_impl<T, CRTP>>(TExplicit{}, typename sm<T>::has_history_states{},
                                    typename sm<T>::initial_but_not_history_states_t{});
   }
 
   template <class T, class... Ts>  // explicit
   void update_composite_states(const aux::type_list<Ts...> &, ...) BOOST_MSM_LITE_NOEXCEPT_IF(is_noexcept) {
-    auto &sm = aux::try_get<T>(&sub_sms_);
+    auto &sm = aux::try_get<T>(&static_cast<CRTP*>(this)->sub_sms_);
     int _[]{0, (sm.current_state_[sm.template get_region<Ts>()] = aux::get_id<typename T::states_ids_t, -1, Ts>(), 0)...};
     (void)_;
     // TODO
@@ -1548,7 +1533,7 @@ class sm {
   template <class T, class... Ts, class... THs>  // history states, no explicit
   void update_composite_states(const aux::type_list<> &, const aux::true_type &, const aux::type_list<THs...> &)
       BOOST_MSM_LITE_NOEXCEPT_IF(is_noexcept) {
-    auto &sm = aux::try_get<T>(&sub_sms_);
+    auto &sm = aux::try_get<T>(&static_cast<CRTP*>(this)->sub_sms_);
     int _[]{0, (sm.current_state_[aux::get_id<typename T::initial_states_ids_t, -1, THs>()] =
                     aux::get_id<typename T::states_ids_t, -1, THs>(),
                 0)...};
@@ -1557,7 +1542,7 @@ class sm {
 
   template <class T>  // just initials, no explicit
   void update_composite_states(const aux::type_list<> &, const aux::false_type &, ...) BOOST_MSM_LITE_NOEXCEPT_IF(is_noexcept) {
-    aux::try_get<T>(&sub_sms_).initialize(typename T::initial_states_t{});
+    aux::try_get<T>(&static_cast<CRTP*>(this)->sub_sms_).initialize(typename T::initial_states_t{});
   }
 
   template <class TState>
@@ -1587,8 +1572,6 @@ class sm {
     return lock_guard{thread_safety_};
   }
 
-  deps_t deps_;
-  sub_sms_t sub_sms_;
   transitions_t transitions_;
 
  protected:
@@ -1597,6 +1580,50 @@ class sm {
  private:
   thread_safety_t thread_safety_;
   defer_queue_t<aux::apply_t<aux::variant, events_t>> defer_;
+};
+template <class TSM>
+class sm : public sm_impl<TSM, sm<TSM>> {
+public:
+  using type = TSM;
+  template<template<class> class, class> friend struct sm_inject;
+  template<class T>
+  using rebind = sm<sm_policy<T>>;
+  using sm_t = typename sm_inject<rebind, typename TSM::sm>::sm;
+  using sm_raw_t = aux::remove_reference_t<sm_t>;
+  using thread_safety_t = typename TSM::thread_safety_policy::type;
+  template <class T> using defer_queue_t = typename TSM::defer_queue_policy::template rebind<T>;
+  using transitions_t = decltype(aux::declval<sm_raw_t>()());
+  using states_t = aux::apply_t<aux::unique_t, aux::apply_t<get_states, transitions_t>>;
+  template<class>
+  struct convert;
+
+  template<class... Ts>
+  struct convert<aux::type_list<Ts...>> {
+    using type = aux::type_list<sm_impl<Ts, sm>...>;
+  };
+  using sub_sms_t = aux::apply_t<aux::pool, typename convert<aux::apply_t<get_sub_sms, states_t>>::type>;
+  using deps = aux::apply_t<aux::unique_t, aux::join_t<typename sm_inject<rebind, typename TSM::sm>::all, aux::apply_t<detail::merge_deps, transitions_t>>>;
+  using deps_t = aux::apply_t<aux::pool, deps>;
+
+  template <class... TDeps>
+  using dependable = aux::is_same<aux::bool_list<aux::always<TDeps>::value...>,
+                                  aux::bool_list<is_required<TDeps, deps_t>::value...>>;
+
+ public:
+  sm(sm &&) = default;
+  sm(const sm &) = delete;
+  sm &operator=(const sm &) = delete;
+
+  template <class... TDeps>//, BOOST_MSM_LITE_REQUIRES(dependable<TDeps...>::value)>
+  explicit sm(TDeps &&... deps) BOOST_MSM_LITE_NOEXCEPT : deps_{aux::init{}, aux::pool<TDeps...>{deps...}}//, sub_sms_{deps_}
+  { }
+
+  explicit sm(deps_t &deps) BOOST_MSM_LITE_NOEXCEPT : deps_(deps)//, sub_sms_{deps_}
+  { }
+
+ //private:
+  deps_t deps_;
+  sub_sms_t sub_sms_;
 };
 template <class TEvent = void>
 struct dispatch_event_impl {

@@ -1289,13 +1289,9 @@ public:
   using events = aux::apply_t<aux::unique_t, aux::apply_t<get_all_events, transitions_t>>;
   using transitions = aux::apply_t<aux::type_list, transitions_t>;
 
-  sm_impl(const aux::pool_type<sm_raw_t&>* t) BOOST_MSM_LITE_NOEXCEPT : transitions_((t->value)()) {
-    initialize(initial_states_t{});
-  }
+  sm_impl(const aux::pool_type<sm_raw_t&>* t) BOOST_MSM_LITE_NOEXCEPT : transitions_((t->value)()) { }
 
-  sm_impl(...) BOOST_MSM_LITE_NOEXCEPT : transitions_(sm_t{}()) {
-    initialize(initial_states_t{});
-  }
+  sm_impl(...) BOOST_MSM_LITE_NOEXCEPT : transitions_(sm_t{}()) { }
 
 #if defined(__cpp_exceptions) || defined(__EXCEPTIONS)
   using exceptions = aux::apply_t<aux::unique_t, aux::apply_t<get_exceptions, events_t>>;
@@ -1319,20 +1315,29 @@ public:
     const auto handled =
         process_event_impl<get_event_mapping_t<TEvent, mappings_t>>(event, self_, states_t{}, aux::make_index_sequence<regions>{});
 #endif
-    //process_internal_event(anonymous{});
+    process_internal_event(self_, anonymous{});
     process_defer_events(handled, event, aux::type<defer_queue_t<TEvent>>{});
 
     return handled;
   }
 
  private:
-  template <class... TStates>
-  void initialize(const aux::type_list<TStates...> &) BOOST_MSM_LITE_NOEXCEPT {
+
+  template <class TDeps, class TSub, class... TStates>
+  void initialize(TDeps& deps, TSub& sub, const aux::type_list<TStates...> &) BOOST_MSM_LITE_NOEXCEPT {
     auto region = 0, i = region;
     int _[]{0, (region = i, current_state_[region] = aux::get_id<states_ids_t, 0, TStates>(), ++i, 0)...};
     (void)_;
-    //process_internal_event(anonymous{});
-    //process_internal_event(on_entry{});
+
+    struct self {
+      using type __attribute__((unused)) = sm_impl;
+      TDeps& deps_;
+      sm_impl& me_;
+      TSub& sub_sms_;
+    } self_{deps, *this, sub};
+
+    process_internal_event(self_, anonymous{});
+    process_internal_event(self_, on_entry{});
   }
 
   void initialize(const aux::type_list<> &) BOOST_MSM_LITE_NOEXCEPT {}
@@ -1350,23 +1355,23 @@ public:
 
   status process_internal_event(...) BOOST_MSM_LITE_NOEXCEPT_IF(is_noexcept) { return status::NOT_HANDLED; }
 
-  template <class TEvent, BOOST_MSM_LITE_REQUIRES(aux::is_base_of<aux::pool_type<TEvent>, events_ids_t>::value)>
-  status process_internal_event(const TEvent &event) BOOST_MSM_LITE_NOEXCEPT_IF(is_noexcept) {
+  template <class TSelf, class TEvent, BOOST_MSM_LITE_REQUIRES(aux::is_base_of<aux::pool_type<TEvent>, events_ids_t>::value)>
+  status process_internal_event(TSelf& self, const TEvent &event) BOOST_MSM_LITE_NOEXCEPT_IF(is_noexcept) {
     BOOST_MSM_LITE_LOG(process_event, sm_raw_t, event);
 #if defined(__cpp_exceptions) || defined(__EXCEPTIONS)
     return process_event_noexcept(event, aux::integral_constant<bool, is_noexcept>{});
 #else
-    return process_event_impl<get_event_mapping_t<TEvent, mappings_t>>(event, states_t{}, aux::make_index_sequence<regions>{});
+    return process_event_impl<get_event_mapping_t<TEvent, mappings_t>>(event, self, states_t{}, aux::make_index_sequence<regions>{});
 #endif
   }
 
-  template <class TEvent, BOOST_MSM_LITE_REQUIRES(aux::is_base_of<aux::pool_type<TEvent>, events_ids_t>::value)>
-  status process_internal_event(const TEvent &event, aux::byte &current_state) BOOST_MSM_LITE_NOEXCEPT_IF(is_noexcept) {
+  template <class TSelf, class TEvent, BOOST_MSM_LITE_REQUIRES(aux::is_base_of<aux::pool_type<TEvent>, events_ids_t>::value)>
+  status process_internal_event(TSelf& self, const TEvent &event, aux::byte &current_state) BOOST_MSM_LITE_NOEXCEPT_IF(is_noexcept) {
     BOOST_MSM_LITE_LOG(process_event, sm_raw_t, event);
 #if defined(__cpp_exceptions) || defined(__EXCEPTIONS)
     return process_event_noexcept(event, current_state, aux::integral_constant<bool, is_noexcept>{});
 #else
-    return process_event_impl<get_event_mapping_t<TEvent, mappings_t>>(event, states_t{}, current_state);
+    return process_event_impl<get_event_mapping_t<TEvent, mappings_t>>(event, self, states_t{}, current_state);
 #endif
   }
 
@@ -1488,25 +1493,25 @@ public:
   }
 
   template <class, class TSelf, class TSrcState, class TDstState>
-  void update_current_state_impl(TSelf&, aux::byte &current_state, const aux::byte &new_state, const TSrcState &src_state,
+  void update_current_state_impl(TSelf& self, aux::byte &current_state, const aux::byte &new_state, const TSrcState &src_state,
                                  const TDstState &dst_state) BOOST_MSM_LITE_NOEXCEPT_IF(is_noexcept) {
-    //process_internal_event(on_exit{}, current_state);
+    process_internal_event(self, on_exit{}, current_state);
     BOOST_MSM_LITE_LOG(state_change, sm_raw_t, src_state, dst_state);
     (void)src_state;
     (void)dst_state;
     current_state = new_state;
-    //process_internal_event(on_entry{}, current_state);
+    process_internal_event(self, on_entry{}, current_state);
   }
 
   template <class TExplicit, class TSelf, class TSrcState, class T>
   void update_current_state_impl(TSelf& self, aux::byte &current_state, const aux::byte &new_state, const TSrcState &src_state,
                                  const state<sm<T>> &dst_state) BOOST_MSM_LITE_NOEXCEPT_IF(is_noexcept) {
-    //process_internal_event(on_exit{}, current_state);
+    process_internal_event(self, on_exit{}, current_state);
     BOOST_MSM_LITE_LOG(state_change, sm_raw_t, src_state, dst_state);
     (void)src_state;
     (void)dst_state;
     current_state = new_state;
-    //process_internal_event(on_entry{}, current_state);
+    process_internal_event(self, on_entry{}, current_state);
     update_composite_states<sm_impl<T>>(self, TExplicit{}, typename sm_impl<T>::has_history_states{},
                                    typename sm_impl<T>::initial_but_not_history_states_t{});
   }
@@ -1531,7 +1536,7 @@ public:
 
   template <class T, class TSelf>  // just initials, no explicit
   void update_composite_states(TSelf& self, const aux::type_list<> &, const aux::false_type &, ...) BOOST_MSM_LITE_NOEXCEPT_IF(is_noexcept) {
-    aux::try_get<T>(&self.sub_sms_).initialize(typename T::initial_states_t{});
+    aux::try_get<T>(&self.sub_sms_).initialize(self.deps_, self.sub_sms_, typename T::initial_states_t{});
   }
 
   template <class TState>
@@ -1606,10 +1611,13 @@ public:
 
   template <class... TDeps>//, BOOST_MSM_LITE_REQUIRES(dependable<TDeps...>::value)>
   explicit sm(TDeps &&... deps) BOOST_MSM_LITE_NOEXCEPT : deps_{aux::init{}, aux::pool<TDeps...>{deps...}}, sub_sms_{aux::pool<TDeps...>{deps...}}
-  { }
+  {
+    static_cast<aux::pool_type<sm_impl<TSM>>&>(sub_sms_).value.initialize(deps_, sub_sms_, typename sm_impl<TSM>::initial_states_t{});
+  }
 
-  explicit sm(deps_t &deps) BOOST_MSM_LITE_NOEXCEPT : deps_(deps), sub_sms_{deps}
-  { }
+  //TODO
+  //explicit sm(deps_t &deps) BOOST_MSM_LITE_NOEXCEPT : deps_(deps), sub_sms_{deps}
+  //{ }
 
   template <class TEvent>
   status process_event(const TEvent &event) BOOST_MSM_LITE_NOEXCEPT_IF(is_noexcept) {

@@ -1079,18 +1079,18 @@ struct transition_impl<> {
 template <class...>
 struct transition_sub_impl;
 template <class TSM, class T, class... Ts>
-struct transition_sub_impl<TSM, T, Ts...> {
+struct transition_sub_impl<sm<TSM>, T, Ts...> {
   template <class SM, class TEvent>
   static status execute(SM &self, const TEvent &event, aux::byte &current_state) BOOST_MSM_LITE_NOEXCEPT_IF(SM::is_noexcept) {
-    const auto handled = aux::try_get<TSM>(&self.sub_sms_).process_event(event, self.deps_, self.sub_sms_);
+    const auto handled = aux::try_get<sm_impl<TSM>>(&self.sub_sms_).process_event(event, self.deps_, self.sub_sms_);
     return handled != status::NOT_HANDLED ? handled : transition_impl<T, Ts...>::execute(self, event, current_state);
   }
 };
 template <class TSM>
-struct transition_sub_impl<TSM> {
+struct transition_sub_impl<sm<TSM>> {
   template <class SM, class TEvent>
   static status execute(SM &self, const TEvent &event, aux::byte &) BOOST_MSM_LITE_NOEXCEPT_IF(SM::is_noexcept) {
-    return aux::try_get<TSM>(&self.sub_sms_).process_event(event, self.deps_, self.sub_sms_);
+    return aux::try_get<sm_impl<TSM>>(&self.sub_sms_).process_event(event, self.deps_, self.sub_sms_);
   }
 };
 template <class, class>
@@ -1161,15 +1161,15 @@ template <class T, class... Ts>
 transition_impl<Ts...> get_state_mapping_impl(state_mappings<T, aux::type_list<Ts...>> *);
 template <class S>
 transition_sub_impl<S> get_sub_state_mapping_impl(...);
-template <class T, class FIXME, class... Ts>
-transition_sub_impl<T, Ts...> get_sub_state_mapping_impl(state_mappings<FIXME, aux::type_list<Ts...>> *);
+template <class T, class... Ts>
+transition_sub_impl<T, Ts...> get_sub_state_mapping_impl(state_mappings<T, aux::type_list<Ts...>> *);
 template <class T, class U>
 struct get_state_mapping {
   using type = decltype(get_state_mapping_impl<T>((U *)0));
 };
 template <class T, class U>
 struct get_state_mapping<sm<T>, U> {
-  using type = decltype(get_sub_state_mapping_impl<sm_impl<T>>((U *)0));
+  using type = decltype(get_sub_state_mapping_impl<sm<T>>((U *)0));
 };
 template <class T, class U>
 using get_state_mapping_t = typename get_state_mapping<T, U>::type;

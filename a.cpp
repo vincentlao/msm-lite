@@ -61,7 +61,7 @@ struct c {
     using namespace msm;
     return make_transition_table(
       *"idle"_s + event<e1> / [](int&) { std::cout << "action" << std::endl; } = state<sub>,
-      *state<sub> + event<e6> / [] { std::cout << "exit" << std::endl; } = X
+      state<sub> + event<e6> / [] { std::cout << "exit" << std::endl; } = X
     );
   }
 };

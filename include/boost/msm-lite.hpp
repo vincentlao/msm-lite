@@ -961,7 +961,7 @@ struct transition<state<S1>, state<S2>, event<E>, G, A> {
     if (call(g, event, self.deps_, self.me_)) {
       call(a, event, self.deps_, self.me_);
       self.me_.template update_current_state<typename state<S1>::explicit_states>(self,
-          current_state, aux::get_id<typename SM::states_ids_t, -1, dst_state>(), state<src_state>{}, state<dst_state>{});
+          current_state, aux::get_id<typename SM::type::states_ids_t, -1, dst_state>(), state<src_state>{}, state<dst_state>{});
       return ret_status<A>();
     }
     return status::NOT_HANDLED;
@@ -1045,7 +1045,7 @@ template <class T, class... Ts>
 struct transition_impl<T, Ts...> {
   template <class SM, class TEvent>
   static status execute(SM &self, const TEvent &event, aux::byte &current_state) BOOST_MSM_LITE_NOEXCEPT_IF(SM::is_noexcept) {
-    if (aux::get<T>(self.me_transitions_).execute(self, event, current_state) != status::NOT_HANDLED) {
+    if (aux::get<T>(self.me_.transitions_).execute(self, event, current_state) != status::NOT_HANDLED) {
       return status::HANDLED;
     }
     return transition_impl<Ts...>::execute(self, event, current_state);
@@ -1307,7 +1307,7 @@ public:
     BOOST_MSM_LITE_LOG(process_event, sm_raw_t, event);
 
     struct self {
-      using type = sm_impl;
+      using type __attribute__((unused)) = sm_impl;
       TDeps& deps_;
       sm_impl& me_;
       TSub& sub_sms_;
@@ -1319,33 +1319,10 @@ public:
     const auto handled =
         process_event_impl<get_event_mapping_t<TEvent, mappings_t>>(event, self_, states_t{}, aux::make_index_sequence<regions>{});
 #endif
-    process_internal_event(anonymous{});
-    //process_defer_events(handled, event, self, aux::type<defer_queue_t<TEvent>>{});
+    //process_internal_event(anonymous{});
+    process_defer_events(handled, event, aux::type<defer_queue_t<TEvent>>{});
 
     return handled;
-  }
-
-  template <class TVisitor, BOOST_MSM_LITE_REQUIRES(concepts::callable<void, TVisitor>::value)>
-  void visit_current_states(const TVisitor &visitor) const
-      BOOST_MSM_LITE_NOEXCEPT_IF(BOOST_MSM_LITE_NOEXCEPT_IF(visitor(state<initial_state>{}))) {
-    visit_current_states_impl(visitor, states_t{}, aux::make_index_sequence<regions>{});
-  }
-
-  template <class TState>
-  bool is(const state<TState> &) const BOOST_MSM_LITE_NOEXCEPT {
-    auto result = false;
-    visit_current_states([&](auto state) { result |= aux::is_same<TState, typename decltype(state)::type>::value; });
-    return result;
-  }
-
-  template <class... TStates, BOOST_MSM_LITE_REQUIRES(sizeof...(TStates) == regions)>
-  bool is(const state<TStates> &...) const BOOST_MSM_LITE_NOEXCEPT {
-    auto result = true;
-    auto i = 0;
-    int state_ids[] = {aux::get_id<states_ids_t, 0, TStates>()...};
-    visit_current_states(
-        [&](auto state) { result &= (aux::get_id<states_ids_t, 0, typename decltype(state)::type>() == state_ids[i++]); });
-    return result;
   }
 
  private:
@@ -1354,8 +1331,8 @@ public:
     auto region = 0, i = region;
     int _[]{0, (region = i, current_state_[region] = aux::get_id<states_ids_t, 0, TStates>(), ++i, 0)...};
     (void)_;
-    process_internal_event(anonymous{});
-    process_internal_event(on_entry{});
+    //process_internal_event(anonymous{});
+    //process_internal_event(on_entry{});
   }
 
   void initialize(const aux::type_list<> &) BOOST_MSM_LITE_NOEXCEPT {}
@@ -1368,7 +1345,7 @@ public:
 #else
     return process_event_impl<get_event_mapping_t<TEvent, mappings_t>>(event, states_t{}, aux::make_index_sequence<regions>{});
 #endif
-    process_internal_event(anonymous{});
+    //process_internal_event(anonymous{});
   }
 
   status process_internal_event(...) BOOST_MSM_LITE_NOEXCEPT_IF(is_noexcept) { return status::NOT_HANDLED; }
@@ -1513,23 +1490,23 @@ public:
   template <class, class TSelf, class TSrcState, class TDstState>
   void update_current_state_impl(TSelf&, aux::byte &current_state, const aux::byte &new_state, const TSrcState &src_state,
                                  const TDstState &dst_state) BOOST_MSM_LITE_NOEXCEPT_IF(is_noexcept) {
-    process_internal_event(on_exit{}, current_state);
+    //process_internal_event(on_exit{}, current_state);
     BOOST_MSM_LITE_LOG(state_change, sm_raw_t, src_state, dst_state);
     (void)src_state;
     (void)dst_state;
     current_state = new_state;
-    process_internal_event(on_entry{}, current_state);
+    //process_internal_event(on_entry{}, current_state);
   }
 
   template <class TExplicit, class TSelf, class TSrcState, class T>
   void update_current_state_impl(TSelf& self, aux::byte &current_state, const aux::byte &new_state, const TSrcState &src_state,
                                  const state<sm<T>> &dst_state) BOOST_MSM_LITE_NOEXCEPT_IF(is_noexcept) {
-    process_internal_event(on_exit{}, current_state);
+    //process_internal_event(on_exit{}, current_state);
     BOOST_MSM_LITE_LOG(state_change, sm_raw_t, src_state, dst_state);
     (void)src_state;
     (void)dst_state;
     current_state = new_state;
-    process_internal_event(on_entry{}, current_state);
+    //process_internal_event(on_entry{}, current_state);
     update_composite_states<sm_impl<T>>(self, TExplicit{}, typename sm_impl<T>::has_history_states{},
                                    typename sm_impl<T>::initial_but_not_history_states_t{});
   }
@@ -1642,6 +1619,32 @@ public:
   template <class TEvent>
   status process_event(const event<TEvent> &) BOOST_MSM_LITE_NOEXCEPT_IF(is_noexcept) {
     return process_event(TEvent{});
+  }
+
+  template <class TVisitor, BOOST_MSM_LITE_REQUIRES(concepts::callable<void, TVisitor>::value)>
+  void visit_current_states(const TVisitor &visitor) const
+      BOOST_MSM_LITE_NOEXCEPT_IF(BOOST_MSM_LITE_NOEXCEPT_IF(visitor(state<initial_state>{}))) {
+    using states_t = typename sm_impl<TSM>::states_t;
+    constexpr auto regions = sm_impl<TSM>::regions;
+    static_cast<const aux::pool_type<sm_impl<TSM>>&>(sub_sms_).value.visit_current_states_impl(visitor, states_t{}, aux::make_index_sequence<regions>{});
+  }
+
+  template <class TState>
+  bool is(const state<TState> &) const BOOST_MSM_LITE_NOEXCEPT {
+    auto result = false;
+    visit_current_states([&](auto state) { result |= aux::is_same<TState, typename decltype(state)::type>::value; });
+    return result;
+  }
+
+  template <class... TStates, BOOST_MSM_LITE_REQUIRES(sizeof...(TStates) == sm_impl<TSM>::regions)>
+  bool is(const state<TStates> &...) const BOOST_MSM_LITE_NOEXCEPT {
+    auto result = true;
+    auto i = 0;
+    using states_ids_t = typename sm_impl<TSM>::states_ids_t;
+    int state_ids[] = {aux::get_id<states_ids_t, 0, TStates>()...};
+    visit_current_states(
+        [&](auto state) { result &= (aux::get_id<states_ids_t, 0, typename decltype(state)::type>() == state_ids[i++]); });
+    return result;
   }
 
  private:

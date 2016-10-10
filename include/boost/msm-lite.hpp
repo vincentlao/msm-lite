@@ -279,7 +279,9 @@ struct pool : pool_type<Ts>... {
   explicit pool(Ts... ts) BOOST_MSM_LITE_NOEXCEPT : pool_type<Ts>{ts}... {}
   template <class... TArgs>
   pool(init &&, pool<TArgs...> &&p) BOOST_MSM_LITE_NOEXCEPT : pool_type<Ts>{aux::try_get<Ts>(&p)}... {}
-  pool(){}
+
+  template <class... TArgs>
+  pool(const pool<TArgs...> &p) BOOST_MSM_LITE_NOEXCEPT : pool_type<Ts>{{&p}}... {}
 };
 template <>
 struct pool<> {
@@ -1185,7 +1187,7 @@ struct get_all_events_impl {
 };
 template <class T, class TEvent>
 struct get_all_events_impl<sm<T>, TEvent> {
-  using type = aux::join_t<aux::type_list<TEvent>, typename sm<T>::events>;
+  using type = aux::join_t<aux::type_list<TEvent>, typename sm_impl<T>::events>;
 };
 template <class... Ts>
 using get_all_events = aux::join_t<typename get_all_events_impl<typename Ts::src_state, typename Ts::event>::type...>;
@@ -1287,8 +1289,11 @@ public:
   using events = aux::apply_t<aux::unique_t, aux::apply_t<get_all_events, transitions_t>>;
   using transitions = aux::apply_t<aux::type_list, transitions_t>;
 
-  //sm_impl() BOOST_MSM_LITE_NOEXCEPT : transitions_(aux::try_get<sm_t>(&static_cast<CRTP*>(this)->sub_sms_)()) {
-  sm_impl() BOOST_MSM_LITE_NOEXCEPT : transitions_(sm_t{}()) {
+  sm_impl(const aux::pool_type<sm_raw_t&>* t) BOOST_MSM_LITE_NOEXCEPT : transitions_((t->value)()) {
+    initialize(initial_states_t{});
+  }
+
+  sm_impl(...) BOOST_MSM_LITE_NOEXCEPT : transitions_(sm_t{}()) {
     initialize(initial_states_t{});
   }
 
@@ -1525,8 +1530,8 @@ public:
     (void)dst_state;
     current_state = new_state;
     process_internal_event(on_entry{}, current_state);
-    update_composite_states<sm_impl<T>>(self, TExplicit{}, typename sm<T>::has_history_states{},
-                                   typename sm<T>::initial_but_not_history_states_t{});
+    update_composite_states<sm_impl<T>>(self, TExplicit{}, typename sm_impl<T>::has_history_states{},
+                                   typename sm_impl<T>::initial_but_not_history_states_t{});
   }
 
   template <class T, class TSelf, class... Ts>  // explicit
@@ -1589,7 +1594,7 @@ public:
   defer_queue_t<aux::apply_t<aux::variant, events_t>> defer_;
 };
 template <class TSM>
-class sm : public sm_impl<TSM> {
+class sm {
 public:
   using type = TSM;
   template<template<class> class, class> friend struct sm_inject;
@@ -1609,7 +1614,7 @@ public:
     using type = aux::type_list<sm_impl<Ts>...>;
   };
   using sub_sms = aux::apply_t<get_sub_sms, states_t>;
-  using sub_sms_t = aux::apply_t<aux::pool, typename convert<aux::apply_t<get_sub_sms, states_t>>::type>;
+  using sub_sms_t = aux::apply_t<aux::pool, typename convert<aux::join_t<aux::type_list<TSM>, aux::apply_t<get_sub_sms, states_t>>>::type>;
   using deps = aux::apply_t<merge_deps, transitions_t>;
   using deps_t = aux::apply_t<aux::pool, aux::apply_t<aux::unique_t, aux::join_t<deps, aux::apply_t<merge_deps, sub_sms_t>>>>;
 
@@ -1623,15 +1628,15 @@ public:
   sm &operator=(const sm &) = delete;
 
   template <class... TDeps>//, BOOST_MSM_LITE_REQUIRES(dependable<TDeps...>::value)>
-  explicit sm(TDeps &&... deps) BOOST_MSM_LITE_NOEXCEPT : deps_{aux::init{}, aux::pool<TDeps...>{deps...}}//, sub_sms_{deps_}
+  explicit sm(TDeps &&... deps) BOOST_MSM_LITE_NOEXCEPT : deps_{aux::init{}, aux::pool<TDeps...>{deps...}}, sub_sms_{aux::pool<TDeps...>{deps...}}
   { }
 
-  explicit sm(deps_t &deps) BOOST_MSM_LITE_NOEXCEPT : deps_(deps)//, sub_sms_{deps_}
+  explicit sm(deps_t &deps) BOOST_MSM_LITE_NOEXCEPT : deps_(deps), sub_sms_{deps}
   { }
 
   template <class TEvent>
   status process_event(const TEvent &event) BOOST_MSM_LITE_NOEXCEPT_IF(is_noexcept) {
-    return sm_impl<TSM>::process_event(event, deps_, sub_sms_);
+    return static_cast<aux::pool_type<sm_impl<TSM>>&>(sub_sms_).value.process_event(event, deps_, sub_sms_);
   }
 
   template <class TEvent>

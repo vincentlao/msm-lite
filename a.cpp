@@ -37,13 +37,16 @@ struct e6{};
 struct e7{};
 
 struct sub2 {
+  sub2(bool, bool){}
   auto operator()() {
     using namespace msm;
     return make_transition_table(
-      *"s1"_s + event<e3> / [](double&) { std::cout << "sub sub action" << std::endl; } = "s2"_s,
+      *"s1"_s + event<e3> / [this](double&) { blah = true; std::cout << "sub sub action" << std::endl; } = "s2"_s,
       "s2"_s + event<e4> / [] { std::cout << "exit sub sub action" << std::endl; }
     );
   }
+
+  bool blah = false;
 };
 
 struct sub {
@@ -57,6 +60,7 @@ struct sub {
 };
 
 struct c {
+  c(int){}
   auto operator()() {
     using namespace msm;
     return make_transition_table(
@@ -70,19 +74,22 @@ struct c {
 template<class> struct q;
 
 int main() {
-  c c_;
+  c c_{42};
   sub s_;
   int i = 2;
+  sub2 s2{false, false};
   double d = 2.0;
   //msm::sm<c&(sub&)> sm{c_, s_, d, i};
 
   //q<typename msm::sm<c>::states_ids_t>{};
 
-  msm::sm<c> sm{d, i};
+  msm::sm<c> sm{d, i, c_, s2};
+  std::cout << s2.blah << std::endl;
   sm.process_event(e1{});
   sm.process_event(e2{});
   sm.process_event(e3{});
   sm.process_event(e4{});
   sm.process_event(e5{});
   sm.process_event(e6{});
+  std::cout << s2.blah << std::endl;
 }

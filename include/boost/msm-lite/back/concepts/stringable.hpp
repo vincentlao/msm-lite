@@ -1,6 +1,8 @@
 #ifndef STRINGABLE_61TPC07G
 #define STRINGABLE_61TPC07G
 
+#include "boost/msm-lite/aux_/type_traits.hpp"
+
 namespace concepts {
 template <class T, class = decltype(T::c_str())>
 aux::true_type test_stringable(const T &);

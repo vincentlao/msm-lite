@@ -22,6 +22,7 @@
 #endif
 
 #include "boost/msm-lite/aux_/type_traits.hpp"
+#include "boost/msm-lite/aux_/utility.hpp"
 #include "boost/msm-lite/back/concepts/concepts.hpp"
 
 namespace aux {

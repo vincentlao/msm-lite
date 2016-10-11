@@ -39,6 +39,7 @@ pph() {
   echo '
     BOOST_MSM_LITE_NAMESPACE_BEGIN
     #include "boost/msm-lite/aux_/type_traits.hpp"
+    #include "boost/msm-lite/aux_/utility.hpp"
     #include "boost/msm-lite/back/concepts/concepts.hpp"
     #include "boost/msm-lite/back/back.hpp"
     #include "boost/msm-lite/front/front.hpp"' > tmp.hpp

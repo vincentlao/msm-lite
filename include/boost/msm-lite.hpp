@@ -144,6 +144,8 @@ struct function_traits<R (T::*)(TArgs...) const> {
 };
 template <class T>
 using function_traits_t = typename function_traits<T>::args;
+}
+namespace aux {
 template <int...>
 struct index_sequence {
   using type = index_sequence;

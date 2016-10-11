@@ -1,6 +1,8 @@
 #ifndef TRANSITION_4OSPJ5W9
 #define TRANSITION_4OSPJ5W9
 
+#include "boost/msm-lite/front/fwd.hpp"
+
 namespace detail {
 
 struct always {

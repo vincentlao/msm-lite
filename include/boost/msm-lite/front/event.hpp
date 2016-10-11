@@ -1,6 +1,8 @@
 #ifndef EVENT_94X8WBIE
 #define EVENT_94X8WBIE
 
+#include "boost/msm-lite/front/fwd.hpp"
+
 namespace detail {
 
 template <class>

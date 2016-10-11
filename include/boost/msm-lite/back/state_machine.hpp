@@ -142,7 +142,6 @@ class sm_impl {
 
 #if defined(__cpp_exceptions) || defined(__EXCEPTIONS)
   using exceptions = aux::apply_t<aux::unique_t, aux::apply_t<get_exceptions, events_t>>;
-  static constexpr auto is_noexcept = _IF(aux::declval<sm_raw_t>()());
 #endif
 
   template <class TEvent, class TDeps, class TSub>
@@ -157,7 +156,7 @@ class sm_impl {
     } self_{deps, *this, sub};
 
 #if defined(__cpp_exceptions) || defined(__EXCEPTIONS)
-    const auto handled = process_event_noexcept(event, self_, aux::integral_constant<bool, is_noexcept>{});
+    const auto handled = process_event_noexcept(event, self_, aux::integral_constant<bool, true>{});
 #else
     const auto handled = process_event_impl<get_event_mapping_t<TEvent, mappings_t>>(event, self_, states_t{},
                                                                                      aux::make_index_sequence<regions>{});

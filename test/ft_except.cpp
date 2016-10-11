@@ -13,10 +13,10 @@ struct e1 {};
 struct e2 {};
 struct e3 {};
 
-auto idle = msm::state<class idle>{};
-auto error = msm::state<class error>{};
-auto s1 = msm::state<class s1>{};
-auto s2 = msm::state<class s2>{};
+auto idle = msm::state<class idle>;
+auto error = msm::state<class error>;
+auto s1 = msm::state<class s1>;
+auto s2 = msm::state<class s2>;
 
 struct exception1 {};
 struct exception2 {};

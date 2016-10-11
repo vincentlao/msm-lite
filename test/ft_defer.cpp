@@ -17,7 +17,7 @@ struct event2 {};
 
 test defer_and_transitions = [] {
   struct c {
-    auto configure() noexcept {
+    auto operator()() noexcept {
       using namespace msm;
 
       // clang-format off
@@ -57,7 +57,7 @@ test defer_and_transitions = [] {
 
 test defer_and_anonymous = [] {
   struct c {
-    auto configure() const noexcept {
+    auto operator()() const noexcept {
       using namespace msm;
 
       // clang-format off
@@ -77,7 +77,6 @@ test defer_and_anonymous = [] {
     }
   };
 
-  sm<sub&, exeception>{sub, 42};
   msm::sm<c, msm::defer_queue<std::queue>> sm;
   sm.process_event(event1());
   sm.process_event(event2());

@@ -175,16 +175,16 @@ namespace concepts {
 test configurable_concept = [] {
   struct c0 {};
   struct c1 {
-    auto configure() const noexcept { return aux::pool<>{}; }
+    auto operator()() const noexcept { return aux::pool<>{}; }
   };
   struct c2 {
-    auto configure() noexcept { return aux::pool<>{}; }
+    auto operator()() noexcept { return aux::pool<>{}; }
   };
   struct c3 {
-    auto configure() { return aux::pool<>{}; }
+    auto operator()() { return aux::pool<>{}; }
   };
   struct c4 {
-    int configure();
+    int operator()();
   };
   struct c5 {
     auto setup() { return aux::pool<>{}; }

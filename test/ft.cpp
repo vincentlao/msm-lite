@@ -1719,6 +1719,7 @@ test sm_testing_orthogonal_regions = [] {
   sm.set_current_states(s1, s3);
   expect(sm.is(s1, s3));
 };
+#endif
 
 test uml_notation = [] {
   struct c {
@@ -1861,5 +1862,4 @@ test di_complex = [] {
   sm.process_event(e2{});
   expect(sm.is(msm::X));
 };
-#endif
 #endif

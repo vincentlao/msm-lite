@@ -66,7 +66,7 @@ test transition_sizeof = [] {
 
 test sm_sizeof_empty = [] {
   struct empty {
-    auto configure() noexcept {
+    auto operator()() noexcept {
       using namespace msm;
       return make_transition_table();
     }
@@ -77,7 +77,7 @@ test sm_sizeof_empty = [] {
 
 test sm_sizeof_default_guard_action = [] {
   struct c {
-    auto configure() noexcept {
+    auto operator()() noexcept {
       using namespace msm;
       // clang-format off
       return make_transition_table(
@@ -97,7 +97,7 @@ test sm_sizeof_default_guard_action = [] {
 
 test sm_sizeof_no_capture = [] {
   struct no_capture_transition {
-    auto configure() noexcept {
+    auto operator()() noexcept {
       using namespace msm;
       // clang-format off
       return make_transition_table(
@@ -210,7 +210,7 @@ test sm_sizeof_no_capture = [] {
 
 test sm_sizeof_more_than_256_transitions = [] {
   struct c {
-    auto configure() noexcept {
+    auto operator()() noexcept {
       using namespace msm;
       // clang-format off
       return make_transition_table(

@@ -701,6 +701,7 @@ class sm_impl {
   sm_impl(...) : transitions_(sm_t{}()) { initialize(typename sm_impl<TSM>::initial_states_t{}); }
 #if defined(__cpp_exceptions) || defined(__EXCEPTIONS)
   using exceptions = aux::apply_t<aux::unique_t, aux::apply_t<get_exceptions, events_t>>;
+  using has_exceptions = aux::integral_constant<bool, (aux::size<exceptions>::value > 0)>;
 #endif
   template <class TEvent, class TDeps, class TSub>
   status process_event(const TEvent &event, TDeps &deps, TSub &sub) {
@@ -712,7 +713,7 @@ class sm_impl {
       TSub &sub_sms_;
     } self_{deps, *this, sub};
 #if defined(__cpp_exceptions) || defined(__EXCEPTIONS)
-    const auto handled = process_event_noexcept(event, self_, aux::integral_constant<bool, true>{});
+    const auto handled = process_event_noexcept(event, self_, has_exceptions{});
 #else
     const auto handled = process_event_impl<get_event_mapping_t<TEvent, mappings_t>>(event, self_, states_t{},
                                                                                      aux::make_index_sequence<regions>{});
@@ -745,7 +746,7 @@ class sm_impl {
   status process_event_no_deffer(TSelf &self, const TEvent &event) {
     BOOST_MSM_LITE_LOG(process_event, sm_raw_t, event);
 #if defined(__cpp_exceptions) || defined(__EXCEPTIONS)
-    return process_event_noexcept(event, self, aux::integral_constant<bool, true>{});
+    return process_event_noexcept(event, self, has_exceptions{});
 #else
     return process_event_impl<get_event_mapping_t<TEvent, mappings_t>>(event, self, states_t{},
                                                                        aux::make_index_sequence<regions>{});
@@ -757,7 +758,7 @@ class sm_impl {
   status process_internal_event(TSelf &self, const TEvent &event) {
     BOOST_MSM_LITE_LOG(process_event, sm_raw_t, event);
 #if defined(__cpp_exceptions) || defined(__EXCEPTIONS)
-    return process_event_noexcept(event, self, aux::integral_constant<bool, true>{});
+    return process_event_noexcept(event, self, has_exceptions{});
 #else
     return process_event_impl<get_event_mapping_t<TEvent, mappings_t>>(event, self, states_t{},
                                                                        aux::make_index_sequence<regions>{});
@@ -767,7 +768,7 @@ class sm_impl {
   status process_internal_event(TSelf &self, const TEvent &event, aux::byte &current_state) {
     BOOST_MSM_LITE_LOG(process_event, sm_raw_t, event);
 #if defined(__cpp_exceptions) || defined(__EXCEPTIONS)
-    return process_event_noexcept(event, self, current_state, aux::integral_constant<bool, true>{});
+    return process_event_noexcept(event, self, current_state, has_exceptions{});
 #else
     return process_event_impl<get_event_mapping_t<TEvent, mappings_t>>(event, self, states_t{}, current_state);
 #endif
@@ -803,16 +804,16 @@ class sm_impl {
   }
 #if defined(__cpp_exceptions) || defined(__EXCEPTIONS)
   template <class TEvent, class TSelf>
-  status process_event_noexcept(const TEvent &event, TSelf &self, const aux::true_type &) noexcept {
+  status process_event_noexcept(const TEvent &event, TSelf &self, const aux::false_type &) noexcept {
     return process_event_impl<get_event_mapping_t<TEvent, mappings_t>>(event, self, states_t{},
                                                                        aux::make_index_sequence<regions>{});
   }
   template <class TEvent, class TSelf>
-  status process_event_noexcept(const TEvent &event, TSelf &self, aux::byte &current_state, const aux::true_type &) noexcept {
+  status process_event_noexcept(const TEvent &event, TSelf &self, aux::byte &current_state, const aux::false_type &) noexcept {
     return process_event_impl<get_event_mapping_t<TEvent, mappings_t>>(event, self, states_t{}, current_state);
   }
   template <class TEvent, class TSelf>
-  status process_event_noexcept(const TEvent &event, TSelf &self, const aux::false_type &) {
+  status process_event_noexcept(const TEvent &event, TSelf &self, const aux::true_type &) {
     try {
       return process_event_impl<get_event_mapping_t<TEvent, mappings_t>>(event, self, states_t{},
                                                                          aux::make_index_sequence<regions>{});
@@ -1488,10 +1489,10 @@ struct transition<state<S1>, state<S2>, event<E>, G, A> {
   template <class SM>
   status execute(SM &self, const E &event, aux::byte &current_state) {
     if (call(g, event, self.deps_, self.me_)) {
+      call(a, event, self.deps_, self.me_);
       self.me_.template update_current_state<typename state<S1>::explicit_states>(
           self, current_state, aux::get_id<typename SM::type::states_ids_t, -1, dst_state>(), state<src_state>{},
           state<dst_state>{});
-      call(a, event, self.deps_, self.me_);
       return ret_status<A>();
     }
     return status::NOT_HANDLED;
@@ -1512,10 +1513,10 @@ struct transition<state<S1>, state<S2>, event<E>, always, A> {
   transition(const always &, const A &a) : a(a) {}
   template <class SM>
   status execute(SM &self, const E &event, aux::byte &current_state) {
+    call(a, event, self.deps_, self.me_);
     self.me_.template update_current_state<typename state<S1>::explicit_states>(
         self, current_state, aux::get_id<typename SM::type::states_ids_t, -1, dst_state>(), state<src_state>{},
         state<dst_state>{});
-    call(a, event, self.deps_, self.me_);
     return ret_status<A>();
   }
   A a;

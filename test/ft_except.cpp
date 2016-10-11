@@ -26,7 +26,7 @@ struct exception_data {
 
 test exception_minimal = [] {
   struct c {
-    auto operator()() const {  // noexcept
+    auto operator()() const {
       using namespace msm;
       // clang-format off
       return make_transition_table(
@@ -42,12 +42,11 @@ test exception_minimal = [] {
   expect(sm.is(msm::X));
 };
 
-#if 0
 test exception_data_minimal = [] {
   struct c {
-    auto operator()() const {  // noexcept
+    auto operator()() const {
       using namespace msm;
-      auto guard = [](const auto& ex) { return ex.value == 42; };
+      auto guard = [](const auto& ex) { return ex.exception.value == 42; }; // TODO get rid of .exception
 
       // clang-format off
       return make_transition_table(
@@ -62,11 +61,10 @@ test exception_data_minimal = [] {
   sm.process_event(e1{});  // throws exception1
   expect(sm.is(msm::X));
 };
-#endif
 
 test exception_many = [] {
   struct c {
-    auto operator()() const {  // noexcept
+    auto operator()() const {
       using namespace msm;
       // clang-format off
       return make_transition_table(
@@ -85,7 +83,7 @@ test exception_many = [] {
 
 test generic_exception_handler = [] {
   struct c {
-    auto operator()() const {  // noexcept
+    auto operator()() const {
       using namespace msm;
       // clang-format off
       return make_transition_table(
@@ -104,7 +102,7 @@ test generic_exception_handler = [] {
 
 test generic_exception_handler_priority = [] {
   struct c {
-    auto operator()() const {  // noexcept
+    auto operator()() const {
       using namespace msm;
       // clang-format off
       return make_transition_table(
@@ -123,11 +121,12 @@ test generic_exception_handler_priority = [] {
 
 test exception_not_handled = [] {
   struct c {
-    auto operator()() const {  // noexcept
+    auto operator()() const {
       using namespace msm;
       // clang-format off
       return make_transition_table(
-       *idle + event<e1> / [] { throw exception1{}; } = s1
+        *idle + event<e1> / [] { throw exception1{}; } = s1
+      , *error + exception<> / [] {}
       );
       // clang-format on
     }
@@ -140,7 +139,7 @@ test exception_not_handled = [] {
 
 test exception_orthogonal_handler = [] {
   struct c {
-    auto operator()() const {  // noexcept
+    auto operator()() const {
       using namespace msm;
       // clang-format off
       return make_transition_table(
@@ -159,7 +158,7 @@ test exception_orthogonal_handler = [] {
 
 test exception_orthogonal_handler_generic_handler = [] {
   struct c {
-    auto operator()() const {  // noexcept
+    auto operator()() const {
       using namespace msm;
       // clang-format off
       return make_transition_table(
@@ -177,7 +176,7 @@ test exception_orthogonal_handler_generic_handler = [] {
 
 test exception_orthogonal_handler_generic_handler_with_exception = [] {
   struct c {
-    auto operator()() const {  // noexcept
+    auto operator()() const {
       using namespace msm;
       // clang-format off
       return make_transition_table(

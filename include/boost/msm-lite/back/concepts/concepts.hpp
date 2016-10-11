@@ -3,6 +3,12 @@
 
 #include "boost/msm-lite/aux_/type_traits.hpp"
 
+namespace detail {
+struct on_entry;
+struct on_exit;
+struct terminate_state;
+}
+
 namespace concepts {
 template <class T>
 decltype(aux::declval<T>()()) configurable_impl(int);

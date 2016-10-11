@@ -1,4 +1,4 @@
-##ifndef TYPE_TRAITS_XM72V8F0
+#ifndef TYPE_TRAITS_XM72V8F0
 #define TYPE_TRAITS_XM72V8F0
 
 #define BOOST_MSM_LITE_REQUIRES(...) typename aux::enable_if<__VA_ARGS__, int>::type = 0
@@ -8,7 +8,7 @@ using byte = unsigned char;
 struct none_type {};
 template <char... Chrs>
 struct string {
-  static auto c_str() BOOST_MSM_LITE_NOEXCEPT {
+  static auto c_str() {
     static constexpr char str[] = {Chrs..., 0};
     return str;
   }
@@ -32,7 +32,7 @@ struct inherit : Ts... {
   using type = inherit;
 };
 template <class T>
-T &&declval() BOOST_MSM_LITE_NOEXCEPT;
+T &&declval();
 template <class T, T V>
 struct integral_constant {
   using type = integral_constant;
@@ -199,7 +199,7 @@ struct tuple_impl;
 template <int... Ns, class... Ts>
 struct tuple_impl<index_sequence<Ns...>, Ts...> : tuple_type<Ns, Ts>... {
   using boost_di_inject__ = aux::type_list<Ts...>;
-  explicit tuple_impl(Ts... ts) BOOST_MSM_LITE_NOEXCEPT : tuple_type<Ns, Ts>{ts}... {}
+  explicit tuple_impl(Ts... ts) : tuple_type<Ns, Ts>{ts}... {}
 };
 template <>
 struct tuple_impl<index_sequence<0>> {
@@ -208,11 +208,11 @@ struct tuple_impl<index_sequence<0>> {
 template <class... Ts>
 using tuple = tuple_impl<make_index_sequence<sizeof...(Ts)>, Ts...>;
 template <int N, class T>
-auto &get_by_id_impl(tuple_type<N, T> *object) BOOST_MSM_LITE_NOEXCEPT {
+auto &get_by_id_impl(tuple_type<N, T> *object) {
   return static_cast<tuple_type<N, T> &>(*object).value;
 }
 template <int N, class Tuple>
-auto &get_by_id(Tuple &t) BOOST_MSM_LITE_NOEXCEPT {
+auto &get_by_id(Tuple &t) {
   return get_by_id_impl<N>(&t);
 }
 template <class T>
@@ -221,34 +221,34 @@ struct pool_type {
 };
 struct init {};
 template <class T>
-auto try_get(...) BOOST_MSM_LITE_NOEXCEPT {
+auto try_get(...) {
   return aux::remove_reference_t<T>{};
 }
 template <class T>
-auto &try_get(pool_type<T> *object) BOOST_MSM_LITE_NOEXCEPT {
+auto &try_get(pool_type<T> *object) {
   return static_cast<pool_type<T> &>(*object).value;
 }
 template <class T>
-auto &try_get(pool_type<T &> *object) BOOST_MSM_LITE_NOEXCEPT {
+auto &try_get(pool_type<T &> *object) {
   return static_cast<pool_type<T &> &>(*object).value;
 }
 template <class T, class TPool>
-decltype(auto) get(TPool &p) BOOST_MSM_LITE_NOEXCEPT {
+decltype(auto) get(TPool &p) {
   return static_cast<pool_type<T> &>(p).value;
 }
 template <class... Ts>
 struct pool : pool_type<Ts>... {
   using boost_di_inject__ = aux::type_list<Ts...>;
-  explicit pool(Ts... ts) BOOST_MSM_LITE_NOEXCEPT : pool_type<Ts>{ts}... {}
+  explicit pool(Ts... ts) : pool_type<Ts>{ts}... {}
   template <class... TArgs>
-  pool(init &&, pool<TArgs...> &&p) BOOST_MSM_LITE_NOEXCEPT : pool_type<Ts>{aux::try_get<Ts>(&p)}... {}
+  pool(init &&, pool<TArgs...> &&p) : pool_type<Ts>{aux::try_get<Ts>(&p)}... {}
 
   template <class... TArgs>
-  pool(const pool<TArgs...>& p) BOOST_MSM_LITE_NOEXCEPT : pool_type<Ts>{{&p}}... {}
+  pool(const pool<TArgs...>& p) : pool_type<Ts>{{&p}}... {}
 };
 template <>
 struct pool<> {
-  explicit pool(...) BOOST_MSM_LITE_NOEXCEPT {}
+  explicit pool(...) {}
   aux::byte _[0];
 };
 template <class>
@@ -264,15 +264,15 @@ struct type_id_impl<index_sequence<Ns...>, Ts...> : type_id_type<Ns, Ts>... {};
 template <class... Ts>
 struct type_id : type_id_impl<make_index_sequence<sizeof...(Ts)>, Ts...> {};
 template <class T, int, int N>
-constexpr auto get_id_impl(type_id_type<N, T> *) BOOST_MSM_LITE_NOEXCEPT {
+constexpr auto get_id_impl(type_id_type<N, T> *) {
   return N;
 }
 template <class T, int D>
-constexpr auto get_id_impl(...) BOOST_MSM_LITE_NOEXCEPT {
+constexpr auto get_id_impl(...) {
   return D;
 }
 template <class TIds, int D, class T>
-constexpr auto get_id() BOOST_MSM_LITE_NOEXCEPT {
+constexpr auto get_id() {
   return get_id_impl<T, D>((TIds *)0);
 }
 template <class>

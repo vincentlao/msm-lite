@@ -6,12 +6,6 @@ struct on_entry;
 struct on_exit;
 struct terminate_state;
 
-struct no_policy {
-  using type = no_policy;
-  template <class>
-  using rebind = no_policy;
-  aux::byte _[0];
-};
 template <class...>
 struct transition;
 template <class, class>
@@ -22,13 +16,9 @@ template <class, class>
 struct transition_eg;
 template <class, class>
 struct transition_ea;
-template <class>
-class sm;
-template <class>
-class sm_impl;
 struct defer {
   template <class SM, class T>
-  void operator()(sm<SM> &, const T &) BOOST_MSM_LITE_NOEXCEPT {
+  void operator()(sm<SM> &, const T &) {
     // static_assert(aux::is_same<typename sm<SM>::template defer_queue_t<T>, no_policy>::value, "");
   }
 };
@@ -36,7 +26,7 @@ struct process_event {
   template <class TEvent>
   struct process_event_impl {
     template <class SM, class T>
-    void operator()(sm<SM> &sm, const T &) BOOST_MSM_LITE_NOEXCEPT {
+    void operator()(sm<SM> &sm, const T &) {
       sm.process_event(event);
     }
 
@@ -44,11 +34,10 @@ struct process_event {
   };
 
   template <class TEvent>
-  auto operator()(const TEvent &event) BOOST_MSM_LITE_NOEXCEPT {
+  auto operator()(const TEvent &event) {
     return process_event_impl<TEvent>{event};
   }
 };
-enum class status { HANDLED, NOT_HANDLED, DEFFERED };
 template <class T>
 inline status ret_status() {
   return status::HANDLED;
@@ -57,46 +46,31 @@ template <>
 inline status ret_status<aux::zero_wrapper<defer>>() {
   return status::DEFFERED;
 }
-struct _ {};
-struct thread_safety_policy {};
-struct exception_safe_policy {};
-struct defer_queue_policy {};
 struct operator_base {};
-struct internal_event {
-  static auto c_str() BOOST_MSM_LITE_NOEXCEPT { return "internal_event"; }
-};
-struct anonymous : internal_event {
-  static auto c_str() BOOST_MSM_LITE_NOEXCEPT { return "anonymous"; }
-};
-struct on_entry : internal_event {
-  static auto c_str() BOOST_MSM_LITE_NOEXCEPT { return "on_entry"; }
-};
-struct on_exit : internal_event {
-  static auto c_str() BOOST_MSM_LITE_NOEXCEPT { return "on_exit"; }
-};
+
 struct always {
-  status operator()() const BOOST_MSM_LITE_NOEXCEPT { return status::HANDLED; }
+  status operator()() const { return status::HANDLED; }
   aux::byte _[0];
 };
 struct none {
-  void operator()() BOOST_MSM_LITE_NOEXCEPT {}
+  void operator()() {}
   aux::byte _[0];
 };
 struct fsm {
   using sm = fsm;
   using thread_safety_policy = no_policy;
   using defer_queue_policy = no_policy;
-  auto operator()() BOOST_MSM_LITE_NOEXCEPT { return aux::pool<>{}; }
+  auto operator()() { return aux::pool<>{}; }
 };
 template <class>
 struct event {
   template <class T, BOOST_MSM_LITE_REQUIRES(concepts::callable<bool, T>::value)>
-  auto operator[](const T &t) const BOOST_MSM_LITE_NOEXCEPT {
+  auto operator[](const T &t) const {
     return transition_eg<event, aux::zero_wrapper<T>>{*this, aux::zero_wrapper<T>{t}};
   }
 
   template <class T, BOOST_MSM_LITE_REQUIRES(concepts::callable<void, T>::value)>
-  auto operator/(const T &t) const BOOST_MSM_LITE_NOEXCEPT {
+  auto operator/(const T &t) const {
     return transition_ea<event, aux::zero_wrapper<T>>{*this, aux::zero_wrapper<T>{t}};
   }
 };
@@ -123,15 +97,15 @@ struct stringable<state<TState>> {
 };
 template <class S, bool is_stringable = stringable<S>::value>
 struct state_str {
-  static auto c_str() BOOST_MSM_LITE_NOEXCEPT { return S::type::c_str(); }
+  static auto c_str() { return S::type::c_str(); }
 };
 template <class S>
 struct state_str<S, false> {
-  static auto c_str() BOOST_MSM_LITE_NOEXCEPT { return __PRETTY_FUNCTION__; }
+  static auto c_str() { return __PRETTY_FUNCTION__; }
 };
 template <>
 struct state_str<state<terminate_state>> {
-  static auto c_str() BOOST_MSM_LITE_NOEXCEPT { return "terminate"; }
+  static auto c_str() { return "terminate"; }
 };
 template <char... Chrs>
 struct state_str<state<aux::string<Chrs...>>, false> : aux::string<Chrs...> {};
@@ -141,19 +115,19 @@ template <class TState>
 struct state_impl : state_str<TState> {
   using explicit_states = aux::type_list<>;
   template <class T>
-  auto operator<=(const T &t) const BOOST_MSM_LITE_NOEXCEPT {
+  auto operator<=(const T &t) const {
     return transition<TState, T>{static_cast<const TState &>(*this), t};
   }
   template <class T>
-  auto operator+(const T &t) const BOOST_MSM_LITE_NOEXCEPT {
+  auto operator+(const T &t) const {
     return transition<TState, T>{static_cast<const TState &>(*this), t};
   }
   template <class T, BOOST_MSM_LITE_REQUIRES(concepts::callable<bool, T>::value)>
-  auto operator[](const T &t) const BOOST_MSM_LITE_NOEXCEPT {
+  auto operator[](const T &t) const {
     return transition_sg<TState, aux::zero_wrapper<T>>{static_cast<const TState &>(*this), aux::zero_wrapper<T>{t}};
   }
   template <class T, BOOST_MSM_LITE_REQUIRES(concepts::callable<void, T>::value)>
-  auto operator/(const T &t) const BOOST_MSM_LITE_NOEXCEPT {
+  auto operator/(const T &t) const {
     return transition_sa<TState, aux::zero_wrapper<T>>{static_cast<const TState &>(*this), aux::zero_wrapper<T>{t}};
   }
 };
@@ -162,15 +136,15 @@ struct state : state_impl<state<TState>> {
   using type = TState;
   static constexpr auto initial = false;
   static constexpr auto history = false;
-  auto operator*() const BOOST_MSM_LITE_NOEXCEPT { return state<TState(initial_state)>{}; }
-  auto operator()(const initial_state &) const BOOST_MSM_LITE_NOEXCEPT { return state<TState(initial_state)>{}; }
-  auto operator()(const history_state &) const BOOST_MSM_LITE_NOEXCEPT { return state<TState(history_state)>{}; }
+  auto operator*() const { return state<TState(initial_state)>{}; }
+  auto operator()(const initial_state &) const { return state<TState(initial_state)>{}; }
+  auto operator()(const history_state &) const { return state<TState(history_state)>{}; }
   template <class... Ts>
-  auto operator()(const state<Ts> &...) const BOOST_MSM_LITE_NOEXCEPT {
+  auto operator()(const state<Ts> &...) const {
     return state<TState(Ts...)>{};
   }
   template <class T>
-  auto operator=(const T &t) const BOOST_MSM_LITE_NOEXCEPT {
+  auto operator=(const T &t) const {
     return transition<T, state>{t, *this};
   }
 };
@@ -180,7 +154,7 @@ struct state<TState(initial_state)> : state_impl<state<TState(initial_state)>> {
   static constexpr auto initial = true;
   static constexpr auto history = false;
   template <class T>
-  auto operator=(const T &t) const BOOST_MSM_LITE_NOEXCEPT {
+  auto operator=(const T &t) const {
     return transition<T, state>{t, *this};
   }
 };
@@ -190,7 +164,7 @@ struct state<TState(history_state)> : state_impl<state<TState(history_state)>> {
   static constexpr auto initial = true;
   static constexpr auto history = true;
   template <class T>
-  auto operator=(const T &t) const BOOST_MSM_LITE_NOEXCEPT {
+  auto operator=(const T &t) const {
     return transition<T, state>{t, *this};
   }
 };
@@ -237,29 +211,29 @@ template <class T, class TEvent, class TDeps, class SM,
           aux::enable_if_t<!aux::is_same<TEvent, aux::remove_reference_t<T>>::value &&
                                !aux::is_same<sm<fsm>, aux::remove_reference_t<T>>::value,
                            int> = 0>
-decltype(auto) get_arg(const TEvent &, TDeps &deps, SM &) BOOST_MSM_LITE_NOEXCEPT {
+decltype(auto) get_arg(const TEvent &, TDeps &deps, SM &) {
   return aux::get<T>(deps);
 }
 template <class T, class TEvent, class TDeps, class SM,
           aux::enable_if_t<aux::is_same<TEvent, aux::remove_reference_t<T>>::value, int> = 0>
-decltype(auto) get_arg(const TEvent &event, TDeps &, SM &) BOOST_MSM_LITE_NOEXCEPT {
+decltype(auto) get_arg(const TEvent &event, TDeps &, SM &) {
   return event;
 }
 template <class T, class TEvent, class TDeps, class SM,
           aux::enable_if_t<aux::is_same<sm<fsm>, aux::remove_reference_t<T>>::value, int> = 0>
-decltype(auto) get_arg(const TEvent &, TDeps &, SM &sm) BOOST_MSM_LITE_NOEXCEPT {
+decltype(auto) get_arg(const TEvent &, TDeps &, SM &sm) {
   return sm;
 }
 #if defined(BOOST_MSM_LITE_LOG_ENABLED)
 template <class... Ts, class T, class TEvent, class TDeps, class SM>
 auto call_impl(const aux::type<void> &, const aux::type_list<Ts...> &, T object, const TEvent &event, TDeps &deps, sm_impl<SM> &self)
-    BOOST_MSM_LITE_NOEXCEPT_IF(sm<SM>::is_noexcept) {
+  {
   object(get_arg<Ts>(event, deps, self)...);
   BOOST_MSM_LITE_LOG(action, SM, object, event);
 }
 template <class... Ts, class T, class TEvent, class TDeps, class SM>
 auto call_impl(const aux::type<bool> &, const aux::type_list<Ts...> &, T object, const TEvent &event, TDeps &deps, sm_impl<SM> &self)
-    BOOST_MSM_LITE_NOEXCEPT_IF(sm<SM>::is_noexcept) {
+  {
   auto result = object(get_arg<Ts>(event, deps, self)...);
   BOOST_MSM_LITE_LOG(guard, SM, object, event, result);
   return result;
@@ -268,7 +242,7 @@ auto call_impl(const aux::type<bool> &, const aux::type_list<Ts...> &, T object,
 template <class... Ts, class T, class TEvent, class TDeps, class SM,
           aux::enable_if_t<!aux::is_base_of<operator_base, T>::value, int> = 0>
 auto call_impl(const aux::type_list<Ts...> &args, T object, const TEvent &event, TDeps &deps, sm_impl<SM> &self)
-    BOOST_MSM_LITE_NOEXCEPT_IF(sm<SM>::is_noexcept) {
+  {
 #if defined(BOOST_MSM_LITE_LOG_ENABLED)
   using result_type = decltype(object(get_arg<Ts>(event, deps, self)...));
   return call_impl(aux::type<result_type>{}, args, object, event, deps, self);
@@ -280,27 +254,27 @@ auto call_impl(const aux::type_list<Ts...> &args, T object, const TEvent &event,
 template <class... Ts, class T, class TEvent, class TDeps, class SM,
           aux::enable_if_t<aux::is_base_of<operator_base, T>::value, int> = 0>
 auto call_impl(const aux::type_list<Ts...> &, T object, const TEvent &event, TDeps &deps, sm_impl<SM> &self)
-    BOOST_MSM_LITE_NOEXCEPT_IF(sm<SM>::is_noexcept) {
+  {
   return object(event, deps, self);
 }
 template <class T, class TEvent, class TDeps, class SM>
-auto call(T object, const TEvent &event, TDeps &deps, sm_impl<SM> &self) BOOST_MSM_LITE_NOEXCEPT_IF(sm<SM>::is_noexcept) {
+auto call(T object, const TEvent &event, TDeps &deps, sm_impl<SM> &self){
   return call_impl(args_t<T, TEvent>{}, object, event, deps, self);
 }
 template <class... Ts>
 class seq_ : operator_base {
  public:
-  explicit seq_(Ts... ts) BOOST_MSM_LITE_NOEXCEPT : a(ts...) {}
+  explicit seq_(Ts... ts) : a(ts...) {}
 
   template <class TEvent, class TDeps, class SM>
-  void operator()(const TEvent &event, TDeps &deps, SM &self) BOOST_MSM_LITE_NOEXCEPT_IF(SM::is_noexcept) {
+  void operator()(const TEvent &event, TDeps &deps, SM &self){
     for_all(aux::make_index_sequence<sizeof...(Ts)>{}, event, deps, self);
   }
 
  private:
   template <int... Ns, class TEvent, class TDeps, class SM>
   void for_all(const aux::index_sequence<Ns...> &, const TEvent &event, TDeps &deps, SM &self)
-      BOOST_MSM_LITE_NOEXCEPT_IF(SM::is_noexcept) {
+    {
     int _[]{0, (call(aux::get_by_id<Ns>(a), event, deps, self), 0)...};
     (void)_;
   }
@@ -310,17 +284,17 @@ class seq_ : operator_base {
 template <class... Ts>
 class and_ : operator_base {
  public:
-  explicit and_(Ts... ts) BOOST_MSM_LITE_NOEXCEPT : g(ts...) {}
+  explicit and_(Ts... ts) : g(ts...) {}
 
   template <class TEvent, class TDeps, class SM>
-  auto operator()(const TEvent &event, TDeps &deps, SM &self) BOOST_MSM_LITE_NOEXCEPT_IF(SM::is_noexcept) {
+  auto operator()(const TEvent &event, TDeps &deps, SM &self){
     return for_all(aux::make_index_sequence<sizeof...(Ts)>{}, event, deps, self);
   }
 
  private:
   template <int... Ns, class TEvent, class TDeps, class SM>
   auto for_all(const aux::index_sequence<Ns...> &, const TEvent &event, TDeps &deps, SM &self)
-      BOOST_MSM_LITE_NOEXCEPT_IF(SM::is_noexcept) {
+    {
     auto result = true;
     int _[]{0, (call(aux::get_by_id<Ns>(g), event, deps, self) ? result : result = false)...};
     (void)_;
@@ -332,17 +306,17 @@ class and_ : operator_base {
 template <class... Ts>
 class or_ : operator_base {
  public:
-  explicit or_(Ts... ts) BOOST_MSM_LITE_NOEXCEPT : g(ts...) {}
+  explicit or_(Ts... ts) : g(ts...) {}
 
   template <class TEvent, class TDeps, class SM>
-  auto operator()(const TEvent &event, TDeps &deps, SM &self) BOOST_MSM_LITE_NOEXCEPT_IF(SM::is_noexcept) {
+  auto operator()(const TEvent &event, TDeps &deps, SM &self){
     return for_all(aux::make_index_sequence<sizeof...(Ts)>{}, event, deps, self);
   }
 
  private:
   template <int... Ns, class TEvent, class TDeps, class SM>
   auto for_all(const aux::index_sequence<Ns...> &, const TEvent &event, TDeps &deps, SM &self)
-      BOOST_MSM_LITE_NOEXCEPT_IF(SM::is_noexcept) {
+    {
     auto result = false;
     int _[]{0, (call(aux::get_by_id<Ns>(g), event, deps, self) ? result = true : result)...};
     (void)_;
@@ -354,10 +328,10 @@ class or_ : operator_base {
 template <class T>
 class not_ : operator_base {
  public:
-  explicit not_(T t) BOOST_MSM_LITE_NOEXCEPT : g(t) {}
+  explicit not_(T t) : g(t) {}
 
   template <class TEvent, class TDeps, class SM>
-  auto operator()(const TEvent &event, TDeps &deps, SM &self) BOOST_MSM_LITE_NOEXCEPT_IF(SM::is_noexcept) {
+  auto operator()(const TEvent &event, TDeps &deps, SM &self){
     return !call(g, event, deps, self);
   }
 
@@ -367,7 +341,7 @@ class not_ : operator_base {
 template <class E, class G>
 struct transition<event<E>, G> {
   template <class T>
-  auto operator/(const T &t) const BOOST_MSM_LITE_NOEXCEPT {
+  auto operator/(const T &t) const {
     return transition<event<E>, G, aux::zero_wrapper<T>>{e, g, aux::zero_wrapper<T>{t}};
   }
   event<E> e;
@@ -385,7 +359,7 @@ struct transition<state<S2>, G, A> : transition<state<S2>, state<S2>, event<anon
   using transition<state<S2>, state<S2>, event<anonymous>, G, A>::a;
   transition(const G &g, const A &a) : transition<state<S2>, state<S2>, event<anonymous>, G, A>{g, a} {}
   template <class T>
-  auto operator=(const T &) const BOOST_MSM_LITE_NOEXCEPT {
+  auto operator=(const T &) const {
     return transition<T, state<S2>, event<anonymous>, G, A>{g, a};
   }
 };
@@ -399,11 +373,11 @@ struct transition_sg<state<S2>, G> : transition<state<S2>, state<S2>, event<anon
   using transition<state<S2>, state<S2>, event<anonymous>, G, none>::g;
   transition_sg(const state<S2> &, const G &g) : transition<state<S2>, state<S2>, event<anonymous>, G, none>{g, none{}} {}
   template <class T>
-  auto operator/(const T &t) const BOOST_MSM_LITE_NOEXCEPT {
+  auto operator/(const T &t) const {
     return transition<state<S2>, G, aux::zero_wrapper<T>>{g, aux::zero_wrapper<T>{t}};
   }
   template <class T>
-  auto operator=(const T &) const BOOST_MSM_LITE_NOEXCEPT {
+  auto operator=(const T &) const {
     return transition<T, state<S2>, event<anonymous>, G, none>{g, none{}};
   }
 };
@@ -412,14 +386,14 @@ struct transition_sa<state<S2>, A> : transition<state<S2>, state<S2>, event<anon
   using transition<state<S2>, state<S2>, event<anonymous>, always, A>::a;
   transition_sa(const state<S2> &, const A &a) : transition<state<S2>, state<S2>, event<anonymous>, always, A>{always{}, a} {}
   template <class T>
-  auto operator=(const T &) const BOOST_MSM_LITE_NOEXCEPT {
+  auto operator=(const T &) const {
     return transition<T, state<S2>, event<anonymous>, always, A>{always{}, a};
   }
 };
 template <class S2, class E>
 struct transition<state<S2>, event<E>> {
   template <class T>
-  auto operator=(const T &) const BOOST_MSM_LITE_NOEXCEPT {
+  auto operator=(const T &) const {
     return transition<T, state<S2>, event<E>, always, none>{always{}, none{}};
   }
   const state<S2> &s2;
@@ -428,7 +402,7 @@ struct transition<state<S2>, event<E>> {
 template <class E, class G>
 struct transition_eg<event<E>, G> {
   template <class T>
-  auto operator/(const T &t) const BOOST_MSM_LITE_NOEXCEPT {
+  auto operator/(const T &t) const {
     return transition<event<E>, G, aux::zero_wrapper<T>>{e, g, aux::zero_wrapper<T>{t}};
   }
   event<E> e;
@@ -451,7 +425,7 @@ struct transition<state<S1>, transition<event<E>, G, A>> : transition<state<S1>,
   transition(const state<S1> &, const transition<event<E>, G, A> &t)
       : transition<state<S1>, state<S1>, event<E>, G, A>{t.g, t.a} {}
   template <class T>
-  auto operator=(const T &) const BOOST_MSM_LITE_NOEXCEPT {
+  auto operator=(const T &) const {
     return transition<T, state<S1>, event<E>, G, A>{g, a};
   }
 };
@@ -476,7 +450,7 @@ struct transition<state<S2>, transition_eg<event<E>, G>> : transition<state<S2>,
   transition(const state<S2> &, const transition_eg<event<E>, G> &t)
       : transition<state<S2>, state<S2>, event<E>, G, none>{t.g, none{}} {}
   template <class T>
-  auto operator=(const T &) const BOOST_MSM_LITE_NOEXCEPT {
+  auto operator=(const T &) const {
     return transition<T, state<S2>, event<E>, G, none>{g, none{}};
   }
 };
@@ -492,7 +466,7 @@ struct transition<state<S2>, transition_ea<event<E>, A>> : transition<state<S2>,
   transition(const state<S2> &, const transition_ea<event<E>, A> &t)
       : transition<state<S2>, state<S2>, event<E>, always, A>{always{}, t.a} {}
   template <class T>
-  auto operator=(const T &) const BOOST_MSM_LITE_NOEXCEPT {
+  auto operator=(const T &) const {
     return transition<T, state<S2>, event<E>, always, A>{always{}, a};
   }
 };
@@ -522,7 +496,7 @@ struct transition<state<S1>, state<S2>, event<E>, G, A> {
   transition(const G &g, const A &a) : g(g), a(a) {}
 
   template <class SM>
-  status execute(SM &self, const E &event, aux::byte &current_state) BOOST_MSM_LITE_NOEXCEPT_IF(SM::is_noexcept) {
+  status execute(SM &self, const E &event, aux::byte &current_state){
     if (call(g, event, self.deps_, self.me_)) {
       call(a, event, self.deps_, self.me_);
       self.me_.template update_current_state<typename state<S1>::explicit_states>(self,
@@ -549,7 +523,7 @@ struct transition<state<S1>, state<S2>, event<E>, always, A> {
   transition(const always &, const A &a) : a(a) {}
 
   template <class SM>
-  status execute(SM &self, const E &event, aux::byte &current_state) BOOST_MSM_LITE_NOEXCEPT_IF(SM::is_noexcept) {
+  status execute(SM &self, const E &event, aux::byte &current_state){
     call(a, event, self.deps_, self.me_);
     self.me_.template update_current_state<typename state<S1>::explicit_states>(self,
         current_state, aux::get_id<typename SM::type::states_ids_t, -1, dst_state>(), state<src_state>{}, state<dst_state>{});
@@ -572,7 +546,7 @@ struct transition<state<S1>, state<S2>, event<E>, G, none> {
   transition(const G &g, const none &) : g(g) {}
 
   template <class SM>
-  status execute(SM &self, const E &event, aux::byte &current_state) BOOST_MSM_LITE_NOEXCEPT_IF(SM::is_noexcept) {
+  status execute(SM &self, const E &event, aux::byte &current_state){
     if (call(g, event, self.deps_, self.me_)) {
       self.me_.template update_current_state<typename state<S1>::explicit_states>(self,
           current_state, aux::get_id<typename SM::type::states_ids_t, -1, dst_state>(), state<src_state>{}, state<dst_state>{});
@@ -597,7 +571,7 @@ struct transition<state<S1>, state<S2>, event<E>, always, none> {
   transition(const always &, const none &) {}
 
   template <class SM>
-  status execute(SM &self, const E &, aux::byte &current_state) BOOST_MSM_LITE_NOEXCEPT_IF(SM::is_noexcept) {
+  status execute(SM &self, const E &, aux::byte &current_state){
     self.me_.template update_current_state<typename state<S1>::explicit_states>(self,
         current_state, aux::get_id<typename SM::type::states_ids_t, -1, dst_state>(), state<src_state>{}, state<dst_state>{});
     return status::HANDLED;
@@ -607,22 +581,22 @@ struct transition<state<S1>, state<S2>, event<E>, always, none> {
 
 }  // detail
 template <class T, BOOST_MSM_LITE_REQUIRES(concepts::callable<bool, T>::value)>
-auto operator!(const T &t)BOOST_MSM_LITE_NOEXCEPT {
+auto operator!(const T &t) {
   return detail::not_<aux::zero_wrapper<T>>(aux::zero_wrapper<T>{t});
 }
 template <class T1, class T2,
           BOOST_MSM_LITE_REQUIRES(concepts::callable<bool, T1>::value &&concepts::callable<bool, T2>::value)>
-auto operator&&(const T1 &t1, const T2 &t2) BOOST_MSM_LITE_NOEXCEPT {
+auto operator&&(const T1 &t1, const T2 &t2) {
   return detail::and_<aux::zero_wrapper<T1>, aux::zero_wrapper<T2>>(aux::zero_wrapper<T1>{t1}, aux::zero_wrapper<T2>{t2});
 }
 template <class T1, class T2,
           BOOST_MSM_LITE_REQUIRES(concepts::callable<bool, T1>::value &&concepts::callable<bool, T2>::value)>
-auto operator||(const T1 &t1, const T2 &t2) BOOST_MSM_LITE_NOEXCEPT {
+auto operator||(const T1 &t1, const T2 &t2) {
   return detail::or_<aux::zero_wrapper<T1>, aux::zero_wrapper<T2>>(aux::zero_wrapper<T1>{t1}, aux::zero_wrapper<T2>{t2});
 }
 template <class T1, class T2,
           BOOST_MSM_LITE_REQUIRES(concepts::callable<void, T1>::value &&concepts::callable<void, T2>::value)>
-auto operator,(const T1 &t1, const T2 &t2) BOOST_MSM_LITE_NOEXCEPT {
+auto operator,(const T1 &t1, const T2 &t2) {
   return detail::seq_<aux::zero_wrapper<T1>, aux::zero_wrapper<T2>>(aux::zero_wrapper<T1>{t1}, aux::zero_wrapper<T2>{t2});
 }
 template <class TEvent>
@@ -643,11 +617,11 @@ template <class T>
 typename state2<T>::type state{};
 #if !defined(_MSC_VER)
 template <class T, T... Chrs>
-auto operator""_s() BOOST_MSM_LITE_NOEXCEPT {
+auto operator""_s() {
   return detail::state<aux::string<Chrs...>>{};
 }
 template <class T, T... Chrs>
-auto operator""_t() BOOST_MSM_LITE_NOEXCEPT {
+auto operator""_t() {
   return event<aux::string<Chrs...>>;
 }
 #endif
@@ -667,7 +641,7 @@ __attribute__((unused)) static detail::process_event process_event;
 __attribute__((unused)) static detail::defer defer;
 template <class... Ts, BOOST_MSM_LITE_REQUIRES(aux::is_same<aux::bool_list<aux::always<Ts>::value...>,
                                                             aux::bool_list<concepts::transitional<Ts>::value...>>::value)>
-auto make_transition_table(Ts... ts) BOOST_MSM_LITE_NOEXCEPT {
+auto make_transition_table(Ts... ts) {
   return aux::pool<Ts...>{ts...};
 }
 template <class T, class... TPolicies> /*, BOOST_MSM_LITE_REQUIRES(concepts::configurable<T>::value)*/

@@ -20,6 +20,7 @@ pph() {
   echo "#define BOOST_MSM_LITE_VERSION ${version}'${revision}'${patch}"
   echo "#define BOOST_MSM_LITE_NAMESPACE_BEGIN namespace boost { namespace msm { namespace lite { inline namespace v${version}_${revision}_${patch} {"
   echo "#define BOOST_MSM_LITE_NAMESPACE_END }}}}"
+  echo "#define BOOST_MSM_LITE_LOG(...)"
   echo "#if !defined(__has_builtin)"
   echo "#define __has_builtin(...) 0"
   echo "#endif"
@@ -28,19 +29,19 @@ pph() {
   echo "#endif"
   echo "#if defined(__clang__)"
   echo "#pragma clang diagnostic push"
-  echo "#pragma clang diagnostic error \"-Wgnu-string-literal-operator-template\""
-  echo "#pragma clang diagnostic error \"-Wzero-length-array\""
+  echo "#pragma clang diagnostic ignored \"-Wgnu-string-literal-operator-template\""
+  echo "#pragma clang diagnostic ignored \"-Wzero-length-array\""
   echo "#elif defined(__GNUC__)"
   echo "#pragma GCC diagnostic push"
-  echo "#pragma GCC diagnostic error \"-Wpedantic\""
+  echo "#pragma GCC diagnostic ignored \"-Wpedantic\""
   echo "#endif"
   rm -rf tmp && mkdir tmp && cp -r boost tmp && cd tmp
   echo '
     BOOST_MSM_LITE_NAMESPACE_BEGIN
     #include "boost/msm-lite/aux_/type_traits.hpp"
-    #include "boost/msm-lite/aux_/concepts/concepts.hpp"
-    #include "boost/msm-lite/aux_/back/back.hpp"
-    #include "boost/msm-lite/aux_/front/front.hpp"' > tmp.hpp
+    #include "boost/msm-lite/back/concepts/concepts.hpp"
+    #include "boost/msm-lite/back/back.hpp"
+    #include "boost/msm-lite/front/front.hpp"' > tmp.hpp
   cpp -C -P -nostdinc -I. -DBOOST_DI_INJECT_HPP tmp.hpp 2>/dev/null | \
     sed "s/\/\/\/\///" | \
     sed "s/[ $]*#define/##define/g" | \
@@ -60,4 +61,4 @@ pph() {
 
 set -e
 cd ${0%/*}/../include && pph `head -1 ../doc/CHANGELOG.md  | sed "s/.*\[\(.*\)\].*/\1/" | tr '.' ' '` > "boost/msm-lite.hpp"
-${CLANG_FORMAT:=clang-format} -i "boost/di.hpp"
+${CLANG_FORMAT:=clang-format} -i "boost/msm-lite.hpp"

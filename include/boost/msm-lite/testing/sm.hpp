@@ -10,7 +10,7 @@ class sm : public detail::sm<detail::sm_policy<T, TPolicies...>> {
   using detail::sm<detail::sm_policy<T, TPolicies...>>::sm;
 
   template <class... TStates>
-  void set_current_states(const detail::state<TStates> &...) BOOST_MSM_LITE_NOEXCEPT {
+  void set_current_states(const detail::state<TStates> &...) {
     auto region = 0, i = region;
     int _[]{0, (region = i, detail::sm<detail::sm_policy<T, TPolicies...>>::current_state_[region] =
                                 aux::get_id<states_ids_t, 0, TStates>(),

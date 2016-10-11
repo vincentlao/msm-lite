@@ -972,7 +972,6 @@ test dependencies = [] {
   }
 };
 
-#if 0
 test composite = [] {
   static auto guard = [](int i) {
     expect(42 == i);
@@ -1025,8 +1024,7 @@ test composite = [] {
 
   c c_;
   sub sub_;
-  msm::sm<sub> subsm{sub_};
-  msm::sm<c> sm{c_, subsm, 87.0, 42};
+  msm::sm<c> sm{c_, sub_, 87.0, 42};
 
   expect(sm.is(idle));
   sm.process_event(e1());
@@ -1048,7 +1046,6 @@ test composite = [] {
   expect(c_.a_exit_sub_sm);
   expect(sm.is(s2));
 };
-#endif
 
 test composite_def_ctor = [] {
   static auto in_sub = 0;

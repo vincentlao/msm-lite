@@ -5,12 +5,25 @@
 // (See accompanying file LICENSE_1_0.txt or copy at
 // http://www.boost.org/LICENSE_1_0.txt)
 //
-#include "boost/msm-lite.hpp"
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wgnu-string-literal-operator-template"
+#pragma clang diagnostic ignored "-Wzero-length-array"
+#elif defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpedantic"
+#endif
 
-namespace boost {
-namespace msm {
-namespace lite {
-inline namespace v_1_0_1 {
+#if !defined(__has_builtin)
+#define __has_builtin(...) 0
+#endif
+#if !defined(__has_extension)
+#define __has_extension(...) 0
+#endif
+
+#include "boost/msm-lite/aux_/type_traits.hpp"
+#include "boost/msm-lite/back/concepts/concepts.hpp"
+
 namespace aux {
 test is_constructible_types = [] {
   struct c {
@@ -297,7 +310,3 @@ test dispatchable_concept = [] {
   static_expect(dispatchable<runtime_event, aux::type_list<event2, event1>>::value);
 };
 }  // concepts
-}  // v_1_0_1
-}  // lite
-}  // msm
-}  // boost

@@ -23,7 +23,7 @@ auto guard = [] {
 auto action = [] { std::cout << "action" << std::endl; };
 
 struct hello_world {
-  auto configure() const noexcept {
+  auto operator()() const noexcept {
     using namespace msm;
     // clang-format off
     return make_transition_table(

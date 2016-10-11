@@ -52,7 +52,7 @@ decltype(msm::event<sdl_event_impl<Id>>) sdl_event{};
 auto is_key = [](auto key) { return [=](auto event) { return event.data.key.keysym.sym == key; }; };
 
 struct sdl2 {
-  auto configure() const noexcept {
+  auto operator()() const noexcept {
     using namespace msm;
     // clang-format off
     return make_transition_table(

@@ -15,7 +15,7 @@ struct e2 {};
 struct e3 {};
 
 struct orthogonal_regions {
-  auto configure() const noexcept {
+  auto operator()() const noexcept {
     using namespace msm;
     // clang-format off
     return make_transition_table(

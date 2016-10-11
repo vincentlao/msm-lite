@@ -33,7 +33,7 @@ auto action = [](int i, auto e) {
 };
 
 struct example {
-  auto configure() const noexcept {
+  auto operator()() const noexcept {
     using namespace msm;
     // clang-format off
     return make_transition_table(

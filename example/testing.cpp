@@ -19,7 +19,7 @@ struct data {
 };
 
 struct fsm {
-  auto configure() const noexcept {
+  auto operator()() const noexcept {
     using namespace msm;
 
     auto guard = [](data& d) { return !d.value; };

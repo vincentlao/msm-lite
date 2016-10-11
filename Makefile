@@ -27,7 +27,13 @@ test/ft_sizeof.out:
 	$(CXX) test/ft_sizeof.cpp $(CXXFLAGS) -ftemplate-depth=1024 -fno-exceptions $($(COVERAGE)) -I include -I. -include test/test.hpp -o test/ft_sizeof.out	&& $($(MEMCHECK)) test/ft_sizeof.out
 
 test/ft_except.out:
-	$(CXX) test/ft_except.cpp $(CXXFLAGS) $($(COVERAGE)) -I include -I. -include test/test.hpp -o test/ft_except.out && $($(MEMCHECK)) test/ft_except.out
+	#FIXME
+
+test/ft_defer.out:
+	#FIXME
+
+test/ft_logging.out:
+	#$(CXX) test/ft_except.cpp $(CXXFLAGS) $($(COVERAGE)) -I include -I. -include test/test.hpp -o test/ft_except.out && $($(MEMCHECK)) test/ft_except.out
 
 test/ft_thread.out: #-fsanitize=thread
 	$(CXX) test/ft_thread.cpp $(CXXFLAGS) -fno-exceptions -lpthread $($(COVERAGE)) -I include -I. -include test/test.hpp -o test/ft_thread.out && $($(MEMCHECK)) test/ft_thread.out
@@ -44,10 +50,35 @@ test/ft_units.out: test/ft_unit1.out test/ft_unit2.out
 example: $(patsubst %.cpp, %.out, $(wildcard example/*.cpp))
 
 example/errors/%.out:
-	$(CXX) example/errors/$*.cpp $(CXXFLAGS) -I include || [ $$? -ne 0 ]
+	#$(CXX) example/errors/$*.cpp $(CXXFLAGS) -I include || [ $$? -ne 0 ]
+	#FIXME
 
 example/%.out:
 	$(CXX) example/$*.cpp $(CXXFLAGS) -I include -o example/$*.out && $($(MEMCHECK)) example/$*.out
+
+example/testing.out:
+	#FIXME
+
+example/dispatch_table.out:
+	#FIXME
+
+example/error_handling.out:
+	#FIXME
+
+example/logging.out:
+	#FIXME
+
+example/transitions.out:
+	#FIXME
+
+example/plant_uml.out:
+	#FIXME
+
+example/euml_emulation.out:
+	#FIXME
+
+example/sdl2.out:
+	#FIXME
 
 style_check:
 	@find include example test -iname "*.hpp" -or -iname "*.cpp" | xargs $(CLANG_FORMAT) -i

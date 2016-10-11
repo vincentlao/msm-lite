@@ -12,7 +12,7 @@
 namespace msm = boost::msm::lite;
 
 struct sub {
-  auto configure() const noexcept {
+  auto operator()() const noexcept {
     using namespace msm;
     // clang-format off
       return make_transition_table(
@@ -24,15 +24,13 @@ struct sub {
 };
 
 struct history {
-  auto configure() const noexcept {
+  auto operator()() const noexcept {
     using namespace msm;
-    state<sm<sub>> sub_state;
-
     // clang-format off
     return make_transition_table(
-      sub_state <= *"idle"_s + "e1"_t / [] { std::cout << "enter sub" << std::endl; }
-    , "s1"_s    <= sub_state + "e3"_t / [] { std::cout << "exit sub" << std::endl; }
-    , sub_state <= "s1"_s    + "e4"_t / [] { std::cout << "enter sub again" << std::endl; }
+      state<sub> <= *"idle"_s  + "e1"_t / [] { std::cout << "enter sub" << std::endl; }
+    , "s1"_s     <= state<sub> + "e3"_t / [] { std::cout << "exit sub" << std::endl; }
+    , state<sub> <= "s1"_s     + "e4"_t / [] { std::cout << "enter sub again" << std::endl; }
     );
     // clang-format on
   }

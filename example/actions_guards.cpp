@@ -38,7 +38,7 @@ struct action2 {
 };
 
 struct actions_guards {
-  auto configure() const noexcept {
+  auto operator()() const noexcept {
     using namespace msm;
     // clang-format off
     return make_transition_table(

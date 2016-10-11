@@ -17,7 +17,7 @@ struct e2 {
 auto event2 = msm::event<e2>;
 
 struct events {
-  auto configure() const noexcept {
+  auto operator()() const noexcept {
     using namespace msm;
     auto guard = [](const e2& e) { return e.value; };
 

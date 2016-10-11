@@ -13,7 +13,7 @@
 namespace msm = boost::msm::lite;
 
 struct error_handling {
-  auto configure() const /*noexcept*/ {  // noexcept will call terminate
+  auto operator()() const /*noexcept*/ {  // noexcept will call terminate
     using namespace msm;
     // clang-format off
     return make_transition_table(

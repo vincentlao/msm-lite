@@ -22,7 +22,7 @@ struct event2 {
 };
 
 struct dispatch_table {
-  auto configure() noexcept {
+  auto operator()() noexcept {
     using namespace msm;
     // clang-format off
     return make_transition_table(

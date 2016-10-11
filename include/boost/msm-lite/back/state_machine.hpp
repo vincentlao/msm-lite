@@ -13,6 +13,12 @@
 
 namespace detail {
 
+template <class T>
+struct exception {
+  using type = T;
+  T exception;
+};
+
 struct _ {};
 
 struct internal_event {
@@ -140,9 +146,9 @@ class sm_impl {
 
   sm_impl(...) : transitions_(sm_t{}()) { initialize(typename sm_impl<TSM>::initial_states_t{}); }
 
-#if defined(__cpp_exceptions) || defined(__EXCEPTIONS)
+#if defined(__cpp_exceptions) || defined(__EXCEPTIONS) // __pph__
   using exceptions = aux::apply_t<aux::unique_t, aux::apply_t<get_exceptions, events_t>>;
-#endif
+#endif // __pph__
 
   template <class TEvent, class TDeps, class TSub>
   status process_event(const TEvent &event, TDeps &deps, TSub &sub) {
@@ -155,12 +161,12 @@ class sm_impl {
       TSub &sub_sms_;
     } self_{deps, *this, sub};
 
-#if defined(__cpp_exceptions) || defined(__EXCEPTIONS)
+#if defined(__cpp_exceptions) || defined(__EXCEPTIONS) // __pph__
     const auto handled = process_event_noexcept(event, self_, aux::integral_constant<bool, true>{});
-#else
+#else // __pph__
     const auto handled = process_event_impl<get_event_mapping_t<TEvent, mappings_t>>(event, self_, states_t{},
                                                                                      aux::make_index_sequence<regions>{});
-#endif
+#endif // __pph__
     process_internal_event(self_, anonymous{});
     process_defer_events(self_, handled, event, aux::type<defer_queue_t<TEvent>>{});
 
@@ -193,12 +199,12 @@ class sm_impl {
   template <class TSelf, class TEvent>
   status process_event_no_deffer(TSelf &self, const TEvent &event) {
     BOOST_MSM_LITE_LOG(process_event, sm_raw_t, event);
-#if defined(__cpp_exceptions) || defined(__EXCEPTIONS)
-    return process_event_noexcept(event, self, aux::integral_constant<bool, is_noexcept>{});
-#else
+#if defined(__cpp_exceptions) || defined(__EXCEPTIONS) // __pph__
+    return process_event_noexcept(event, self, aux::integral_constant<bool, true>{});
+#else // __pph__
     return process_event_impl<get_event_mapping_t<TEvent, mappings_t>>(event, self, states_t{},
                                                                        aux::make_index_sequence<regions>{});
-#endif
+#endif // __pph__
     process_internal_event(self, anonymous{});
   }
 
@@ -207,22 +213,22 @@ class sm_impl {
   template <class TSelf, class TEvent, BOOST_MSM_LITE_REQUIRES(aux::is_base_of<aux::pool_type<TEvent>, events_ids_t>::value)>
   status process_internal_event(TSelf &self, const TEvent &event) {
     BOOST_MSM_LITE_LOG(process_event, sm_raw_t, event);
-#if defined(__cpp_exceptions) || defined(__EXCEPTIONS)
-    return process_event_noexcept(event, aux::integral_constant<bool, is_noexcept>{});
-#else
+#if defined(__cpp_exceptions) || defined(__EXCEPTIONS) // __pph__
+    return process_event_noexcept(event, self, aux::integral_constant<bool, true>{});
+#else // __pph__
     return process_event_impl<get_event_mapping_t<TEvent, mappings_t>>(event, self, states_t{},
                                                                        aux::make_index_sequence<regions>{});
-#endif
+#endif // __pph__
   }
 
   template <class TSelf, class TEvent, BOOST_MSM_LITE_REQUIRES(aux::is_base_of<aux::pool_type<TEvent>, events_ids_t>::value)>
   status process_internal_event(TSelf &self, const TEvent &event, aux::byte &current_state) {
     BOOST_MSM_LITE_LOG(process_event, sm_raw_t, event);
-#if defined(__cpp_exceptions) || defined(__EXCEPTIONS)
-    return process_event_noexcept(event, current_state, aux::integral_constant<bool, is_noexcept>{});
-#else
+#if defined(__cpp_exceptions) || defined(__EXCEPTIONS) // __pph__
+    return process_event_noexcept(event, self, current_state, aux::integral_constant<bool, true>{});
+#else // __pph__
     return process_event_impl<get_event_mapping_t<TEvent, mappings_t>>(event, self, states_t{}, current_state);
-#endif
+#endif // __pph__
   }
 
   template <class TMappings, class TEvent, class TSelf, class... TStates>
@@ -257,40 +263,40 @@ class sm_impl {
     return dispatch_table[current_state](self, event, current_state);
   }
 
-#if defined(__cpp_exceptions) || defined(__EXCEPTIONS)
-  template <class TEvent>
-  status process_event_noexcept(const TEvent &event, const aux::true_type &) noexcept {
-    return process_event_impl<get_event_mapping_t<TEvent, mappings_t>>(event, states_t{}, aux::make_index_sequence<regions>{});
+#if defined(__cpp_exceptions) || defined(__EXCEPTIONS) // __pph__
+  template <class TEvent, class TSelf>
+  status process_event_noexcept(const TEvent &event, TSelf& self, const aux::true_type &) noexcept {
+    return process_event_impl<get_event_mapping_t<TEvent, mappings_t>>(event, self, states_t{}, aux::make_index_sequence<regions>{});
   }
 
-  template <class TEvent>
-  status process_event_noexcept(const TEvent &event, aux::byte &current_state, const aux::true_type &) noexcept {
-    return process_event_impl<get_event_mapping_t<TEvent, mappings_t>>(event, states_t{}, current_state);
+  template <class TEvent, class TSelf>
+  status process_event_noexcept(const TEvent &event, TSelf& self, aux::byte &current_state, const aux::true_type &) noexcept {
+    return process_event_impl<get_event_mapping_t<TEvent, mappings_t>>(event, self, states_t{}, current_state);
   }
 
-  template <class TEvent>
-  status process_event_noexcept(const TEvent &event, const aux::false_type &) {
+  template <class TEvent, class TSelf>
+  status process_event_noexcept(const TEvent &event, TSelf& self, const aux::false_type &) {
     try {
-      return process_event_impl<get_event_mapping_t<TEvent, mappings_t>>(event, states_t{},
-                                                                         aux::make_index_sequence<regions>{});
+      return process_event_impl<get_event_mapping_t<TEvent, mappings_t>>(event, self, states_t{}, aux::make_index_sequence<regions>{});
     } catch (...) {
-      return process_exception(exceptions{});
+      return process_exception(self, exceptions{});
     }
   }
 
-  status process_exception(const aux::type_list<> &) { return process_event(exception<_>{}); }
+  template<class TSelf>
+  status process_exception(TSelf& self, const aux::type_list<> &) { return process_event(exception<_>{}, self.deps_, self.sub_sms_); }
 
-  template <class E, class... Es>
-  status process_exception(const aux::type_list<E, Es...> &) {
+  template <class TSelf, class E, class... Es>
+  status process_exception(TSelf& self, const aux::type_list<E, Es...> &) {
     try {
       throw;
     } catch (const typename E::type &e) {
-      return process_event(E{e});
+      return process_event(E{e}, self.deps_, self.sub_sms_);
     } catch (...) {
-      return process_exception(aux::type_list<Es...>{});
+      return process_exception(self, aux::type_list<Es...>{});
     }
   }
-#endif
+#endif // __pph__
 
   template <class TSelf, class TEvent>
   void process_defer_events(TSelf &, const status &, const TEvent &, const aux::type<detail::no_policy> &) {}

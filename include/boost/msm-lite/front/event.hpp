@@ -18,11 +18,11 @@ struct event {
   }
 };
 
-template <class T>
-struct exception {
-  using type = T;
-  T exception;
-};
+//template <class T>
+//struct exception {
+  //using type = T;
+  //T exception;
+//};
 
 template <class TEvent>
 struct unexpected_event {

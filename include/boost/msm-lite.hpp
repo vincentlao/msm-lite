@@ -506,7 +506,6 @@ using get_event_mapping_t = decltype(get_event_mapping_impl<T>((U *)0));
 }
 namespace detail {
 struct thread_safety_policy {};
-struct exception_safe_policy {};
 struct defer_queue_policy__ {};
 struct logging_policy {};
 struct no_policy {
@@ -635,7 +634,6 @@ template <class SM, class... TPolicies>
 struct sm_policy {
   using sm = SM;
   using thread_safety_policy = decltype(get_policy<detail::thread_safety_policy>((aux::inherit<TPolicies...> *)0));
-  using exception_safe_policy = decltype(get_policy<detail::exception_safe_policy>((aux::inherit<TPolicies...> *)0));
   using defer_queue_policy = decltype(get_policy<defer_queue_policy__>((aux::inherit<TPolicies...> *)0));
 };
 template <class>
@@ -1593,7 +1591,6 @@ template <class T>
 struct thread_safe : aux::pair<detail::thread_safety_policy, thread_safe<T>> {
   using type = T;
 };
-struct exception_safe : aux::pair<detail::exception_safe_policy, exception_safe> {};
 template <template <class...> class T>
 struct defer_queue : aux::pair<detail::defer_queue_policy__, defer_queue<T>> {
   template <class U>

@@ -39,7 +39,6 @@ template <class T>
 struct thread_safe : aux::pair<detail::thread_safety_policy, thread_safe<T>> {
   using type = T;
 };
-struct exception_safe : aux::pair<detail::exception_safe_policy, exception_safe> {};
 template <template <class...> class T>
 struct defer_queue : aux::pair<detail::defer_queue_policy__, defer_queue<T>> {
   template <class U>

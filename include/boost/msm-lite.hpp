@@ -873,7 +873,7 @@ class sm_impl {
   }
   transitions_t transitions_;
 
- protected:
+ public:
   aux::conditional_t<(aux::size<states_t>::value > 0xFF), unsigned short, aux::byte> current_state_[regions];
 
  private:
@@ -921,6 +921,7 @@ class sm {
   explicit sm(TDeps &&... deps) : deps_{aux::init{}, aux::pool<TDeps...>{deps...}}, sub_sms_{aux::pool<TDeps...>{deps...}} {
     start(aux::type<sub_sms_t>{});
   }
+  explicit sm(deps_t &deps) : deps_(deps), sub_sms_{deps} { start(aux::type<sub_sms_t>{}); }
   template <class TEvent>
   status process_event(const TEvent &event) {
     return static_cast<aux::pool_type<sm_impl<TSM>> &>(sub_sms_).value.process_event(event, deps_, sub_sms_);
@@ -959,6 +960,8 @@ class sm {
     int _[]{0, (static_cast<aux::pool_type<Ts> &>(sub_sms_).value.start(deps_, sub_sms_), 0)...};
     (void)_;
   }
+
+ protected:
   deps_t deps_;
   sub_sms_t sub_sms_;
 };

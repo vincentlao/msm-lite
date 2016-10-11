@@ -9,6 +9,7 @@
 #include <utility>
 #include "boost/msm-lite.hpp"
 #include "boost/msm-lite/utility/dispatch_table.hpp"
+#include "boost/msm-lite/testing/state_machine.hpp"
 // clang-format off
 #if __has_include(<boost/di.hpp>)
 // clang-format on
@@ -1613,7 +1614,6 @@ test dispatch_runtime_event_sub_sm = [] {
   }
 };
 
-#if 0
 test sm_testing = [] {
   struct data {
     int value = 0;
@@ -1717,7 +1717,6 @@ test sm_testing_orthogonal_regions = [] {
   sm.set_current_states(s1, s3);
   expect(sm.is(s1, s3));
 };
-#endif
 
 test uml_notation = [] {
   struct c {

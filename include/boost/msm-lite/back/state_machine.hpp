@@ -12,7 +12,6 @@
 
 namespace detail {
 
-
 struct _ {};
 
 struct internal_event {
@@ -45,7 +44,7 @@ struct get_all_events_impl {
 };
 template <class T, class TEvent>
 struct get_all_events_impl<sm<T>, TEvent> {
-  using type = aux::join_t<aux::type_list<TEvent>, typename sm_impl<T>::events>;
+  using type = aux::join_t<aux::type_list<TEvent>, typename sm<T>::events>;
 };
 template <class... Ts>
 using get_all_events = aux::join_t<typename get_all_events_impl<typename Ts::src_state, typename Ts::event>::type...>;
@@ -145,10 +144,6 @@ class sm_impl {
   using get_ids = aux::index_sequence<aux::get_id<states_ids_t, -1, TStates>()...>;
 
  public:
-  using states = states_t;
-  using events = aux::apply_t<aux::unique_t, aux::apply_t<get_all_events, transitions_t>>;
-  using transitions = aux::apply_t<aux::type_list, transitions_t>;
-
   sm_impl(const aux::pool_type<sm_raw_t &> *t) : transitions_((t->value)()) {
     initialize(typename sm_impl<TSM>::initial_states_t{});
   }
@@ -467,6 +462,10 @@ class sm {
       aux::is_same<aux::bool_list<aux::always<TDeps>::value...>, aux::bool_list<is_required<TDeps, deps_t>::value...>>;
 
  public:
+  using states = typename sm_impl<TSM>::states_t;
+  using events = aux::apply_t<aux::unique_t, aux::apply_t<get_all_events, transitions_t>>;
+  using transitions = aux::apply_t<aux::type_list, transitions_t>;
+
   sm(sm &&) = default;
   sm(const sm &) = delete;
   sm &operator=(const sm &) = delete;

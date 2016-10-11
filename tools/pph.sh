@@ -36,6 +36,8 @@ pph() {
   echo "#pragma GCC diagnostic ignored \"-Wpedantic\""
   echo "#endif"
   rm -rf tmp && mkdir tmp && cp -r boost tmp && cd tmp
+  find . -iname "*.hpp" | xargs sed -i "s/\(.*\)__pph__/\/\/\/\/\1/g"
+  find . -iname "*.hpp" | xargs sed -i "s/.*\(clang-format.*\)/\/\/\/\/\1/g"
   echo '
     BOOST_MSM_LITE_NAMESPACE_BEGIN
     #include "boost/msm-lite/back/state_machine.hpp"

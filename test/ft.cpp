@@ -8,6 +8,7 @@
 #include <string>
 #include <utility>
 #include "boost/msm-lite.hpp"
+#include "boost/msm-lite/utility/dispatch_table.hpp"
 // clang-format off
 #if __has_include(<boost/di.hpp>)
 // clang-format on
@@ -1499,7 +1500,6 @@ struct event3 {
   explicit event3(const runtime_event &) {}
 };
 
-#if 0
 test dispatch_runtime_event = [] {
   struct c {
     auto operator()() noexcept {
@@ -1613,6 +1613,7 @@ test dispatch_runtime_event_sub_sm = [] {
   }
 };
 
+#if 0
 test sm_testing = [] {
   struct data {
     int value = 0;

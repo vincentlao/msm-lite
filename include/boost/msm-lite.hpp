@@ -35,6 +35,7 @@
 #pragma GCC diagnostic ignored "-Wpedantic"
 #endif
 BOOST_MSM_LITE_NAMESPACE_BEGIN
+#define BOOST_MSM_LITE_REQUIRES(...) typename aux::enable_if<__VA_ARGS__, int>::type = 0
 namespace aux {
 using byte = unsigned char;
 struct none_type {};
@@ -588,7 +589,7 @@ struct get_all_events_impl {
 };
 template <class T, class TEvent>
 struct get_all_events_impl<sm<T>, TEvent> {
-  using type = aux::join_t<aux::type_list<TEvent>, typename sm_impl<T>::events>;
+  using type = aux::join_t<aux::type_list<TEvent>, typename sm<T>::events>;
 };
 template <class... Ts>
 using get_all_events = aux::join_t<typename get_all_events_impl<typename Ts::src_state, typename Ts::event>::type...>;
@@ -686,9 +687,6 @@ class sm_impl {
   using get_ids = aux::index_sequence<aux::get_id<states_ids_t, -1, TStates>()...>;
 
  public:
-  using states = states_t;
-  using events = aux::apply_t<aux::unique_t, aux::apply_t<get_all_events, transitions_t>>;
-  using transitions = aux::apply_t<aux::type_list, transitions_t>;
   sm_impl(const aux::pool_type<sm_raw_t &> *t) : transitions_((t->value)()) {
     initialize(typename sm_impl<TSM>::initial_states_t{});
   }
@@ -734,15 +732,13 @@ class sm_impl {
     return process_event_impl<get_event_mapping_t<TEvent, mappings_t>>(event, states_t{}, aux::make_index_sequence<regions>{});
   }
   status process_internal_event(...) { return status::NOT_HANDLED; }
-  template <class TSelf, class TEvent,
-            typename aux::enable_if<aux::is_base_of<aux::pool_type<TEvent>, events_ids_t>::value, int>::type = 0>
+  template <class TSelf, class TEvent, BOOST_MSM_LITE_REQUIRES(aux::is_base_of<aux::pool_type<TEvent>, events_ids_t>::value)>
   status process_internal_event(TSelf &self, const TEvent &event) {
     BOOST_MSM_LITE_LOG(process_event, sm_raw_t, event);
     return process_event_impl<get_event_mapping_t<TEvent, mappings_t>>(event, self, states_t{},
                                                                        aux::make_index_sequence<regions>{});
   }
-  template <class TSelf, class TEvent,
-            typename aux::enable_if<aux::is_base_of<aux::pool_type<TEvent>, events_ids_t>::value, int>::type = 0>
+  template <class TSelf, class TEvent, BOOST_MSM_LITE_REQUIRES(aux::is_base_of<aux::pool_type<TEvent>, events_ids_t>::value)>
   status process_internal_event(TSelf &self, const TEvent &event, aux::byte &current_state) {
     BOOST_MSM_LITE_LOG(process_event, sm_raw_t, event);
     return process_event_impl<get_event_mapping_t<TEvent, mappings_t>>(event, self, states_t{}, current_state);
@@ -915,6 +911,9 @@ class sm {
       aux::is_same<aux::bool_list<aux::always<TDeps>::value...>, aux::bool_list<is_required<TDeps, deps_t>::value...>>;
 
  public:
+  using states = typename sm_impl<TSM>::states_t;
+  using events = aux::apply_t<aux::unique_t, aux::apply_t<get_all_events, transitions_t>>;
+  using transitions = aux::apply_t<aux::type_list, transitions_t>;
   sm(sm &&) = default;
   sm(const sm &) = delete;
   sm &operator=(const sm &) = delete;
@@ -930,7 +929,7 @@ class sm {
   status process_event(const event<TEvent> &) {
     return process_event(TEvent{});
   }
-  template <class TVisitor, typename aux::enable_if<concepts::callable<void, TVisitor>::value, int>::type = 0>
+  template <class TVisitor, BOOST_MSM_LITE_REQUIRES(concepts::callable<void, TVisitor>::value)>
   void visit_current_states(const TVisitor &visitor) const {
     using states_t = typename sm_impl<TSM>::states_t;
     constexpr auto regions = sm_impl<TSM>::regions;
@@ -943,7 +942,7 @@ class sm {
     visit_current_states([&](auto state) { result |= aux::is_same<TState, typename decltype(state)::type>::value; });
     return result;
   }
-  template <class... TStates, typename aux::enable_if<sizeof...(TStates) == sm_impl<TSM>::regions, int>::type = 0>
+  template <class... TStates, BOOST_MSM_LITE_REQUIRES(sizeof...(TStates) == sm_impl<TSM>::regions)>
   bool is(const state<TStates> &...) const {
     auto result = true;
     auto i = 0;
@@ -979,14 +978,24 @@ struct transition_ea;
 namespace detail {
 template <class>
 struct event {
-  template <class T, typename aux::enable_if<concepts::callable<bool, T>::value, int>::type = 0>
+  template <class T, BOOST_MSM_LITE_REQUIRES(concepts::callable<bool, T>::value)>
   auto operator[](const T &t) const {
     return transition_eg<event, aux::zero_wrapper<T>>{*this, aux::zero_wrapper<T>{t}};
   }
-  template <class T, typename aux::enable_if<concepts::callable<void, T>::value, int>::type = 0>
+  template <class T, BOOST_MSM_LITE_REQUIRES(concepts::callable<void, T>::value)>
   auto operator/(const T &t) const {
     return transition_ea<event, aux::zero_wrapper<T>>{*this, aux::zero_wrapper<T>{t}};
   }
+};
+template <class T>
+struct exception {
+  using type = T;
+  T exception;
+};
+template <class TEvent>
+struct unexpected_event {
+  using type = TEvent;
+  TEvent event;
 };
 }
 namespace detail {
@@ -1028,11 +1037,11 @@ struct state_impl : state_str<TState> {
   auto operator+(const T &t) const {
     return transition<TState, T>{static_cast<const TState &>(*this), t};
   }
-  template <class T, typename aux::enable_if<concepts::callable<bool, T>::value, int>::type = 0>
+  template <class T, BOOST_MSM_LITE_REQUIRES(concepts::callable<bool, T>::value)>
   auto operator[](const T &t) const {
     return transition_sg<TState, aux::zero_wrapper<T>>{static_cast<const TState &>(*this), aux::zero_wrapper<T>{t}};
   }
-  template <class T, typename aux::enable_if<concepts::callable<void, T>::value, int>::type = 0>
+  template <class T, BOOST_MSM_LITE_REQUIRES(concepts::callable<void, T>::value)>
   auto operator/(const T &t) const {
     return transition_sa<TState, aux::zero_wrapper<T>>{static_cast<const TState &>(*this), aux::zero_wrapper<T>{t}};
   }
@@ -1222,22 +1231,22 @@ class not_ : operator_base {
   T g;
 };
 }
-template <class T, typename aux::enable_if<concepts::callable<bool, T>::value, int>::type = 0>
+template <class T, BOOST_MSM_LITE_REQUIRES(concepts::callable<bool, T>::value)>
 auto operator!(const T &t) {
   return detail::not_<aux::zero_wrapper<T>>(aux::zero_wrapper<T>{t});
 }
 template <class T1, class T2,
-          typename aux::enable_if<concepts::callable<bool, T1>::value && concepts::callable<bool, T2>::value, int>::type = 0>
+          BOOST_MSM_LITE_REQUIRES(concepts::callable<bool, T1>::value &&concepts::callable<bool, T2>::value)>
 auto operator&&(const T1 &t1, const T2 &t2) {
   return detail::and_<aux::zero_wrapper<T1>, aux::zero_wrapper<T2>>(aux::zero_wrapper<T1>{t1}, aux::zero_wrapper<T2>{t2});
 }
 template <class T1, class T2,
-          typename aux::enable_if<concepts::callable<bool, T1>::value && concepts::callable<bool, T2>::value, int>::type = 0>
+          BOOST_MSM_LITE_REQUIRES(concepts::callable<bool, T1>::value &&concepts::callable<bool, T2>::value)>
 auto operator||(const T1 &t1, const T2 &t2) {
   return detail::or_<aux::zero_wrapper<T1>, aux::zero_wrapper<T2>>(aux::zero_wrapper<T1>{t1}, aux::zero_wrapper<T2>{t2});
 }
 template <class T1, class T2,
-          typename aux::enable_if<concepts::callable<void, T1>::value && concepts::callable<void, T2>::value, int>::type = 0>
+          BOOST_MSM_LITE_REQUIRES(concepts::callable<void, T1>::value &&concepts::callable<void, T2>::value)>
 auto operator,(const T1 &t1, const T2 &t2) {
   return detail::seq_<aux::zero_wrapper<T1>, aux::zero_wrapper<T2>>(aux::zero_wrapper<T1>{t1}, aux::zero_wrapper<T2>{t2});
 }
@@ -1272,16 +1281,6 @@ struct none {
   void operator()() {}
   aux::byte _[0];
 };
-template <class...>
-struct transition;
-template <class, class>
-struct transition_sg;
-template <class, class>
-struct transition_sa;
-template <class, class>
-struct transition_eg;
-template <class, class>
-struct transition_ea;
 template <class T>
 inline status ret_status() {
   return status::HANDLED;
@@ -1562,9 +1561,8 @@ __attribute__((unused)) static detail::state<detail::terminate_state> X;
 __attribute__((unused)) static detail::history_state H;
 __attribute__((unused)) static detail::process_event process_event;
 __attribute__((unused)) static detail::defer defer;
-template <class... Ts, typename aux::enable_if<aux::is_same<aux::bool_list<aux::always<Ts>::value...>,
-                                                            aux::bool_list<concepts::transitional<Ts>::value...>>::value,
-                                               int>::type = 0>
+template <class... Ts, BOOST_MSM_LITE_REQUIRES(aux::is_same<aux::bool_list<aux::always<Ts>::value...>,
+                                                            aux::bool_list<concepts::transitional<Ts>::value...>>::value)>
 auto make_transition_table(Ts... ts) {
   return aux::pool<Ts...>{ts...};
 }

@@ -12,17 +12,6 @@ struct none {
   aux::byte _[0];
 };
 
-template <class...>
-struct transition;
-template <class, class>
-struct transition_sg;
-template <class, class>
-struct transition_sa;
-template <class, class>
-struct transition_eg;
-template <class, class>
-struct transition_ea;
-
 template <class T>
 inline status ret_status() {
   return status::HANDLED;

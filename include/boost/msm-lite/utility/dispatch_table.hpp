@@ -49,7 +49,26 @@ auto make_dispatch_table(sm<SM> &fsm, const aux::index_sequence<Ns...> &) {
     return dispatch_table[id - EventRangeBegin](fsm, event);
   };
 }
-}
+} // detail
+
+namespace concepts {
+template <class>
+aux::false_type dispatchable_impl(...);
+template <class...>
+struct is_valid_event : aux::true_type {};
+template <class, class TEvent>
+auto dispatchable_impl(TEvent &&) -> is_valid_event<decltype(TEvent::id), decltype(TEvent())>;
+template <class T, class TEvent>
+auto dispatchable_impl(TEvent &&) -> is_valid_event<decltype(TEvent::id), decltype(TEvent(aux::declval<T>()))>;
+template <class, class>
+struct dispatchable;
+template <class T, class... TEvents>
+struct dispatchable<T, aux::type_list<TEvents...>>
+    : aux::is_same<aux::bool_list<aux::always<TEvents>::value...>,
+                   aux::bool_list<decltype(dispatchable_impl<T>(aux::declval<TEvents>()))::value...>> {};
+
+
+}  // concepts
 template <class TEvent, int EventRangeBegin, int EventRangeEnd, class SM,
           BOOST_MSM_LITE_REQUIRES(concepts::dispatchable<TEvent, typename sm<SM>::events>::value)>
 auto make_dispatch_table(sm<SM> &fsm) {

@@ -538,10 +538,10 @@ test transition_process_event = [] {
   sm.process_event(e1{});
   expect(sm.is(s1));
   expect(!c_.a_called);
-  //TODO
-  //sm.process_event(e2{});  // + process_event(e3{})
-  //expect(1 == c_.a_called);
-  //expect(sm.is(msm::X));
+  // TODO
+  // sm.process_event(e2{});  // + process_event(e3{})
+  // expect(1 == c_.a_called);
+  // expect(sm.is(msm::X));
 };
 
 test transition_entry_exit_actions = [] {
@@ -1133,25 +1133,25 @@ test composite_transition_the_same_event = [] {
   expect(sm.is(idle));
   sm.process_event(e1());
   expect(sm.is(state<sub>));
-  //expect(subsm.is(idle));
+  // expect(subsm.is(idle));
 
   sm.process_event(e4());
 
   sm.process_event(e1());
   expect(sm.is(state<sub>));
-  //expect(subsm.is(s1));
+  // expect(subsm.is(s1));
 
   sm.process_event(e2());
   expect(sm.is(state<sub>));
-  //expect(subsm.is(s2));
+  // expect(subsm.is(s2));
 
   sm.process_event(e3());
   expect(sm.is("s1"_s));
-  //expect(subsm.is(s2));
+  // expect(subsm.is(s2));
 
   sm.process_event(e4());
   expect(sm.is(state<sub>));
-  //expect(subsm.is(idle));  // no history
+  // expect(subsm.is(idle));  // no history
 };
 
 test composite_history = [] {
@@ -1193,25 +1193,25 @@ test composite_history = [] {
   expect(sm.is(idle));
   sm.process_event(e1());
   expect(sm.is(state<sub>));
-  //expect(subsm.is(idle));
+  // expect(subsm.is(idle));
 
   sm.process_event(e4());
 
   sm.process_event(e1());
   expect(sm.is(state<sub>));
-  //expect(subsm.is(s1));
+  // expect(subsm.is(s1));
 
   sm.process_event(e2());
   expect(sm.is(state<sub>));
-  //expect(subsm.is(s2));
+  // expect(subsm.is(s2));
 
   sm.process_event(e3());
   expect(sm.is("s1"_s));
-  //expect(subsm.is(s2));
+  // expect(subsm.is(s2));
 
   sm.process_event(e4());
   expect(sm.is(state<sub>));
-  //expect(subsm.is(s2));  // history
+  // expect(subsm.is(s2));  // history
 };
 
 test composite_history_region = [] {
@@ -1248,31 +1248,31 @@ test composite_history_region = [] {
 
   using namespace msm;
 
-  //msm::sm<sub> subsm;
+  // msm::sm<sub> subsm;
   msm::sm<c> sm;
 
   expect(sm.is(idle));
   sm.process_event(e1());
   expect(sm.is(state<sub>));
-  //expect(subsm.is(idle, idle2));
+  // expect(subsm.is(idle, idle2));
 
   sm.process_event(e4());
 
   sm.process_event(e1());
   expect(sm.is(state<sub>));
-  //expect(subsm.is(s1, idle2));
+  // expect(subsm.is(s1, idle2));
 
   sm.process_event(e2());
   expect(sm.is(state<sub>));
-  //expect(subsm.is(s2, s3));
+  // expect(subsm.is(s2, s3));
 
   sm.process_event(e3());
   expect(sm.is("s1"_s));
-  //expect(subsm.is(s2, s3));
+  // expect(subsm.is(s2, s3));
 
   sm.process_event(e4());
   expect(sm.is(state<sub>));
-  //expect(subsm.is(s2, idle2));  // history for region 1
+  // expect(subsm.is(s2, idle2));  // history for region 1
 };
 
 test composite_custom_ctor = [] {
@@ -1382,15 +1382,15 @@ test composite_with_orthogonal_regions = [] {
   sm.process_event(e1());
   expect(sm.is(s1, msm::state<sub>));
 
-  //expect(subsm.is(idle));
+  // expect(subsm.is(idle));
   sm.process_event(e4());
-  //expect(subsm.is(s1));
+  // expect(subsm.is(s1));
   sm.process_event(e4());
-  //expect(subsm.is(s2));
+  // expect(subsm.is(s2));
 
   sm.process_event(e2());
   sm.process_event(e3());
-  //expect(subsm.is(s2));
+  // expect(subsm.is(s2));
   expect(sm.is(msm::X, msm::X));
 };
 
@@ -1424,19 +1424,19 @@ test composite_with_orthogonal_regions_explicit_entry = [] {
 
   msm::sm<c> sm;
   expect(sm.is(msm::state<sub>));
-  //expect(subsm.is(idle, idle2));
+  // expect(subsm.is(idle, idle2));
 
   sm.process_event(e1());
   expect(sm.is(msm::state<sub>));
-  //expect(subsm.is(s1, idle2));
+  // expect(subsm.is(s1, idle2));
 
   sm.process_event(e5());
   expect(sm.is(s1));
-  //expect(subsm.is(s1, idle2));
+  // expect(subsm.is(s1, idle2));
 
   sm.process_event(e6());  // go back to sub
   expect(sm.is(msm::state<sub>));
-  //expect(subsm.is(s2, s3));
+  // expect(subsm.is(s2, s3));
 };
 
 test composite_with_orthogonal_regions_explicit_entry_deduce_region = [] {
@@ -1469,15 +1469,15 @@ test composite_with_orthogonal_regions_explicit_entry_deduce_region = [] {
 
   msm::sm<c> sm;
   expect(sm.is(msm::state<sub>));
-  //expect(subsm.is(idle, idle2));
+  // expect(subsm.is(idle, idle2));
 
   sm.process_event(e1());
   expect(sm.is(msm::state<sub>));
-  //expect(subsm.is(s1, idle2));
+  // expect(subsm.is(s1, idle2));
 
   sm.process_event(e5());
   expect(sm.is(s1));
-  //expect(subsm.is(s1, idle2));
+  // expect(subsm.is(s1, idle2));
 
   sm.process_event(e6());  // go back to sub
   expect(sm.is(msm::state<sub>));

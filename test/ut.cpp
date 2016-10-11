@@ -23,7 +23,10 @@
 
 #include "boost/msm-lite/aux_/type_traits.hpp"
 #include "boost/msm-lite/aux_/utility.hpp"
-#include "boost/msm-lite/back/concepts/concepts.hpp"
+#include "boost/msm-lite/back/concepts/callable.hpp"
+#include "boost/msm-lite/back/concepts/configurable.hpp"
+#include "boost/msm-lite/back/concepts/stringable.hpp"
+#include "boost/msm-lite/back/concepts/transitional.hpp"
 
 namespace aux {
 test is_constructible_types = [] {
@@ -304,10 +307,12 @@ struct event3 {
   // static constexpr auto id = 0;
 };
 
+#if 0
 test dispatchable_concept = [] {
   static_expect(!dispatchable<runtime_event, aux::type_list<event3, event1>>::value);
   static_expect(dispatchable<runtime_event, aux::type_list<>>::value);
   static_expect(dispatchable<runtime_event, aux::type_list<event1, event2>>::value);
   static_expect(dispatchable<runtime_event, aux::type_list<event2, event1>>::value);
 };
+#endif
 }  // concepts

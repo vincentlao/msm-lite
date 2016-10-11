@@ -131,7 +131,7 @@ struct pool : pool_type<Ts>... {
   pool(init &&, pool<TArgs...> &&p) : pool_type<Ts>{aux::try_get<Ts>(&p)}... {}
 
   template <class... TArgs>
-  pool(const pool<TArgs...>& p) : pool_type<Ts>{{&p}}... {}
+  pool(const pool<TArgs...> &p) : pool_type<Ts>{{&p}}... {}
 };
 template <>
 struct pool<> {
@@ -228,4 +228,3 @@ struct zero_wrapper<TExpr, void_t<decltype(+declval<TExpr>())>>
 }  // aux
 
 #endif
-

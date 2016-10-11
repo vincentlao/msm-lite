@@ -226,14 +226,14 @@ decltype(auto) get_arg(const TEvent &, TDeps &, SM &sm) {
 }
 #if defined(BOOST_MSM_LITE_LOG_ENABLED)
 template <class... Ts, class T, class TEvent, class TDeps, class SM>
-auto call_impl(const aux::type<void> &, const aux::type_list<Ts...> &, T object, const TEvent &event, TDeps &deps, sm_impl<SM> &self)
-  {
+auto call_impl(const aux::type<void> &, const aux::type_list<Ts...> &, T object, const TEvent &event, TDeps &deps,
+               sm_impl<SM> &self) {
   object(get_arg<Ts>(event, deps, self)...);
   BOOST_MSM_LITE_LOG(action, SM, object, event);
 }
 template <class... Ts, class T, class TEvent, class TDeps, class SM>
-auto call_impl(const aux::type<bool> &, const aux::type_list<Ts...> &, T object, const TEvent &event, TDeps &deps, sm_impl<SM> &self)
-  {
+auto call_impl(const aux::type<bool> &, const aux::type_list<Ts...> &, T object, const TEvent &event, TDeps &deps,
+               sm_impl<SM> &self) {
   auto result = object(get_arg<Ts>(event, deps, self)...);
   BOOST_MSM_LITE_LOG(guard, SM, object, event, result);
   return result;
@@ -241,8 +241,7 @@ auto call_impl(const aux::type<bool> &, const aux::type_list<Ts...> &, T object,
 #endif
 template <class... Ts, class T, class TEvent, class TDeps, class SM,
           aux::enable_if_t<!aux::is_base_of<operator_base, T>::value, int> = 0>
-auto call_impl(const aux::type_list<Ts...> &args, T object, const TEvent &event, TDeps &deps, sm_impl<SM> &self)
-  {
+auto call_impl(const aux::type_list<Ts...> &args, T object, const TEvent &event, TDeps &deps, sm_impl<SM> &self) {
 #if defined(BOOST_MSM_LITE_LOG_ENABLED)
   using result_type = decltype(object(get_arg<Ts>(event, deps, self)...));
   return call_impl(aux::type<result_type>{}, args, object, event, deps, self);
@@ -253,12 +252,11 @@ auto call_impl(const aux::type_list<Ts...> &args, T object, const TEvent &event,
 }
 template <class... Ts, class T, class TEvent, class TDeps, class SM,
           aux::enable_if_t<aux::is_base_of<operator_base, T>::value, int> = 0>
-auto call_impl(const aux::type_list<Ts...> &, T object, const TEvent &event, TDeps &deps, sm_impl<SM> &self)
-  {
+auto call_impl(const aux::type_list<Ts...> &, T object, const TEvent &event, TDeps &deps, sm_impl<SM> &self) {
   return object(event, deps, self);
 }
 template <class T, class TEvent, class TDeps, class SM>
-auto call(T object, const TEvent &event, TDeps &deps, sm_impl<SM> &self){
+auto call(T object, const TEvent &event, TDeps &deps, sm_impl<SM> &self) {
   return call_impl(args_t<T, TEvent>{}, object, event, deps, self);
 }
 template <class... Ts>
@@ -267,14 +265,13 @@ class seq_ : operator_base {
   explicit seq_(Ts... ts) : a(ts...) {}
 
   template <class TEvent, class TDeps, class SM>
-  void operator()(const TEvent &event, TDeps &deps, SM &self){
+  void operator()(const TEvent &event, TDeps &deps, SM &self) {
     for_all(aux::make_index_sequence<sizeof...(Ts)>{}, event, deps, self);
   }
 
  private:
   template <int... Ns, class TEvent, class TDeps, class SM>
-  void for_all(const aux::index_sequence<Ns...> &, const TEvent &event, TDeps &deps, SM &self)
-    {
+  void for_all(const aux::index_sequence<Ns...> &, const TEvent &event, TDeps &deps, SM &self) {
     int _[]{0, (call(aux::get_by_id<Ns>(a), event, deps, self), 0)...};
     (void)_;
   }
@@ -287,14 +284,13 @@ class and_ : operator_base {
   explicit and_(Ts... ts) : g(ts...) {}
 
   template <class TEvent, class TDeps, class SM>
-  auto operator()(const TEvent &event, TDeps &deps, SM &self){
+  auto operator()(const TEvent &event, TDeps &deps, SM &self) {
     return for_all(aux::make_index_sequence<sizeof...(Ts)>{}, event, deps, self);
   }
 
  private:
   template <int... Ns, class TEvent, class TDeps, class SM>
-  auto for_all(const aux::index_sequence<Ns...> &, const TEvent &event, TDeps &deps, SM &self)
-    {
+  auto for_all(const aux::index_sequence<Ns...> &, const TEvent &event, TDeps &deps, SM &self) {
     auto result = true;
     int _[]{0, (call(aux::get_by_id<Ns>(g), event, deps, self) ? result : result = false)...};
     (void)_;
@@ -309,14 +305,13 @@ class or_ : operator_base {
   explicit or_(Ts... ts) : g(ts...) {}
 
   template <class TEvent, class TDeps, class SM>
-  auto operator()(const TEvent &event, TDeps &deps, SM &self){
+  auto operator()(const TEvent &event, TDeps &deps, SM &self) {
     return for_all(aux::make_index_sequence<sizeof...(Ts)>{}, event, deps, self);
   }
 
  private:
   template <int... Ns, class TEvent, class TDeps, class SM>
-  auto for_all(const aux::index_sequence<Ns...> &, const TEvent &event, TDeps &deps, SM &self)
-    {
+  auto for_all(const aux::index_sequence<Ns...> &, const TEvent &event, TDeps &deps, SM &self) {
     auto result = false;
     int _[]{0, (call(aux::get_by_id<Ns>(g), event, deps, self) ? result = true : result)...};
     (void)_;
@@ -331,7 +326,7 @@ class not_ : operator_base {
   explicit not_(T t) : g(t) {}
 
   template <class TEvent, class TDeps, class SM>
-  auto operator()(const TEvent &event, TDeps &deps, SM &self){
+  auto operator()(const TEvent &event, TDeps &deps, SM &self) {
     return !call(g, event, deps, self);
   }
 
@@ -496,11 +491,12 @@ struct transition<state<S1>, state<S2>, event<E>, G, A> {
   transition(const G &g, const A &a) : g(g), a(a) {}
 
   template <class SM>
-  status execute(SM &self, const E &event, aux::byte &current_state){
+  status execute(SM &self, const E &event, aux::byte &current_state) {
     if (call(g, event, self.deps_, self.me_)) {
       call(a, event, self.deps_, self.me_);
-      self.me_.template update_current_state<typename state<S1>::explicit_states>(self,
-          current_state, aux::get_id<typename SM::type::states_ids_t, -1, dst_state>(), state<src_state>{}, state<dst_state>{});
+      self.me_.template update_current_state<typename state<S1>::explicit_states>(
+          self, current_state, aux::get_id<typename SM::type::states_ids_t, -1, dst_state>(), state<src_state>{},
+          state<dst_state>{});
       return ret_status<A>();
     }
     return status::NOT_HANDLED;
@@ -523,10 +519,11 @@ struct transition<state<S1>, state<S2>, event<E>, always, A> {
   transition(const always &, const A &a) : a(a) {}
 
   template <class SM>
-  status execute(SM &self, const E &event, aux::byte &current_state){
+  status execute(SM &self, const E &event, aux::byte &current_state) {
     call(a, event, self.deps_, self.me_);
-    self.me_.template update_current_state<typename state<S1>::explicit_states>(self,
-        current_state, aux::get_id<typename SM::type::states_ids_t, -1, dst_state>(), state<src_state>{}, state<dst_state>{});
+    self.me_.template update_current_state<typename state<S1>::explicit_states>(
+        self, current_state, aux::get_id<typename SM::type::states_ids_t, -1, dst_state>(), state<src_state>{},
+        state<dst_state>{});
     return ret_status<A>();
   }
 
@@ -546,10 +543,11 @@ struct transition<state<S1>, state<S2>, event<E>, G, none> {
   transition(const G &g, const none &) : g(g) {}
 
   template <class SM>
-  status execute(SM &self, const E &event, aux::byte &current_state){
+  status execute(SM &self, const E &event, aux::byte &current_state) {
     if (call(g, event, self.deps_, self.me_)) {
-      self.me_.template update_current_state<typename state<S1>::explicit_states>(self,
-          current_state, aux::get_id<typename SM::type::states_ids_t, -1, dst_state>(), state<src_state>{}, state<dst_state>{});
+      self.me_.template update_current_state<typename state<S1>::explicit_states>(
+          self, current_state, aux::get_id<typename SM::type::states_ids_t, -1, dst_state>(), state<src_state>{},
+          state<dst_state>{});
       return status::HANDLED;
     }
     return status::NOT_HANDLED;
@@ -571,9 +569,10 @@ struct transition<state<S1>, state<S2>, event<E>, always, none> {
   transition(const always &, const none &) {}
 
   template <class SM>
-  status execute(SM &self, const E &, aux::byte &current_state){
-    self.me_.template update_current_state<typename state<S1>::explicit_states>(self,
-        current_state, aux::get_id<typename SM::type::states_ids_t, -1, dst_state>(), state<src_state>{}, state<dst_state>{});
+  status execute(SM &self, const E &, aux::byte &current_state) {
+    self.me_.template update_current_state<typename state<S1>::explicit_states>(
+        self, current_state, aux::get_id<typename SM::type::states_ids_t, -1, dst_state>(), state<src_state>{},
+        state<dst_state>{});
     return status::HANDLED;
   }
   aux::byte _[0];
@@ -605,11 +604,11 @@ __attribute__((unused)) static const auto on_entry = event<detail::on_entry>;
 __attribute__((unused)) static const auto on_exit = event<detail::on_exit>;
 template <class T = detail::_>
 detail::event<detail::exception<T>> exception{};
-template<class T, class = void>
+template <class T, class = void>
 struct state2 {
   using type = detail::state<T>;
 };
-template<class T>
+template <class T>
 struct state2<T, aux::enable_if_t<concepts::configurable<T>::value>> {
   using type = detail::state<detail::sm<detail::sm_policy<T>>>;
 };

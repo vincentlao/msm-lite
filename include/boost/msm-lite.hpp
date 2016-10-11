@@ -1421,10 +1421,10 @@ struct transition<state<S1>, state<S2>, event<E>, G, A> {
   template <class SM>
   status execute(SM &self, const E &event, aux::byte &current_state) {
     if (call(g, event, self.deps_, self.me_)) {
-      call(a, event, self.deps_, self.me_);
       self.me_.template update_current_state<typename state<S1>::explicit_states>(
           self, current_state, aux::get_id<typename SM::type::states_ids_t, -1, dst_state>(), state<src_state>{},
           state<dst_state>{});
+      call(a, event, self.deps_, self.me_);
       return ret_status<A>();
     }
     return status::NOT_HANDLED;
@@ -1445,10 +1445,10 @@ struct transition<state<S1>, state<S2>, event<E>, always, A> {
   transition(const always &, const A &a) : a(a) {}
   template <class SM>
   status execute(SM &self, const E &event, aux::byte &current_state) {
-    call(a, event, self.deps_, self.me_);
     self.me_.template update_current_state<typename state<S1>::explicit_states>(
         self, current_state, aux::get_id<typename SM::type::states_ids_t, -1, dst_state>(), state<src_state>{},
         state<dst_state>{});
+    call(a, event, self.deps_, self.me_);
     return ret_status<A>();
   }
   A a;

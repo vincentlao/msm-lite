@@ -561,6 +561,18 @@ struct transition_sub_impl<sm<TSM>> {
 };
 }
 namespace detail {
+struct thread_safety_policy {};
+struct exception_safe_policy {};
+struct defer_queue_policy__ {};
+struct logging_policy {};
+struct no_policy {
+  using type = no_policy;
+  template <class>
+  using rebind = no_policy;
+  aux::byte _[0];
+};
+}
+namespace detail {
 struct _ {};
 struct internal_event {
   static auto c_str() { return "internal_event"; }
@@ -573,15 +585,6 @@ struct on_entry : internal_event {
 };
 struct on_exit : internal_event {
   static auto c_str() { return "on_exit"; }
-};
-struct thread_safety_policy {};
-struct exception_safe_policy {};
-struct defer_queue_policy__ {};
-struct no_policy {
-  using type = no_policy;
-  template <class>
-  using rebind = no_policy;
-  aux::byte _[0];
 };
 template <class, class TEvent>
 struct get_all_events_impl {
@@ -703,7 +706,7 @@ class sm_impl {
     const auto handled = process_event_impl<get_event_mapping_t<TEvent, mappings_t>>(event, self_, states_t{},
                                                                                      aux::make_index_sequence<regions>{});
     process_internal_event(self_, anonymous{});
-    process_defer_events(handled, event, aux::type<defer_queue_t<TEvent>>{});
+    process_defer_events(self_, handled, event, aux::type<defer_queue_t<TEvent>>{});
     return handled;
   }
   template <class TDeps, class TSub>
@@ -726,10 +729,12 @@ class sm_impl {
     int _[]{0, (region = i, current_state_[region] = aux::get_id<states_ids_t, 0, TStates>(), ++i, 0)...};
     (void)_;
   }
-  template <class TEvent>
-  status process_event_no_deffer(const TEvent &event) {
+  template <class TSelf, class TEvent>
+  status process_event_no_deffer(TSelf &self, const TEvent &event) {
     BOOST_MSM_LITE_LOG(process_event, sm_raw_t, event);
-    return process_event_impl<get_event_mapping_t<TEvent, mappings_t>>(event, states_t{}, aux::make_index_sequence<regions>{});
+    return process_event_impl<get_event_mapping_t<TEvent, mappings_t>>(event, self, states_t{},
+                                                                       aux::make_index_sequence<regions>{});
+    process_internal_event(self, anonymous{});
   }
   status process_internal_event(...) { return status::NOT_HANDLED; }
   template <class TSelf, class TEvent, BOOST_MSM_LITE_REQUIRES(aux::is_base_of<aux::pool_type<TEvent>, events_ids_t>::value)>
@@ -772,15 +777,15 @@ class sm_impl {
     (void)lock;
     return dispatch_table[current_state](self, event, current_state);
   }
-  template <class TEvent>
-  void process_defer_events(const status &, const TEvent &, const aux::type<detail::no_policy> &) {}
-  template <class TEvent, class T>
-  void process_defer_events(const status &handled, const TEvent &event, const aux::type<T> &) {
+  template <class TSelf, class TEvent>
+  void process_defer_events(TSelf &, const status &, const TEvent &, const aux::type<detail::no_policy> &) {}
+  template <class TSelf, class TEvent, class T>
+  void process_defer_events(TSelf &self, const status &handled, const TEvent &event, const aux::type<T> &) {
     if (handled == status::DEFFERED) {
       defer_.push(event);
     } else {
-      while (!defer_.empty() && defer_.front().template apply<detail::status>([this](const auto &event) {
-        return process_event_no_deffer(event);
+      while (!defer_.empty() && defer_.front().template apply<detail::status>([this, &self](const auto &event) {
+        return process_event_no_deffer(self, event);
       }) == status::HANDLED) {
         defer_.pop();
       }

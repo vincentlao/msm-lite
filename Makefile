@@ -29,9 +29,6 @@ test/ft_sizeof.out:
 test/ft_except.out:
 	#FIXME
 
-test/ft_defer.out:
-	#FIXME
-
 test/ft_logging.out:
 	#$(CXX) test/ft_except.cpp $(CXXFLAGS) $($(COVERAGE)) -I include -I. -include test/test.hpp -o test/ft_except.out && $($(MEMCHECK)) test/ft_except.out
 

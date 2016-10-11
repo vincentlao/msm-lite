@@ -17,9 +17,8 @@ struct event2 {};
 
 test defer_and_transitions = [] {
   struct c {
-    auto operator()() noexcept {
+    auto operator()() {
       using namespace msm;
-
       // clang-format off
       return make_transition_table(
        *"state1"_s + event<event1> / defer,
@@ -42,47 +41,52 @@ test defer_and_transitions = [] {
     std::vector<int> entries;
   };
 
-  msm::sm<c, msm::defer_queue<std::queue>> sm;
+  c c_;
+  msm::sm<c, msm::defer_queue<std::queue>> sm{c_};
   sm.process_event(event1());
   sm.process_event(event1());
   sm.process_event(event2());
   sm.process_event(event2());
 
-  // state1::on_entry()
-  // state2::on_entry()
-  // state3::on_entry()
-  // state4::on_entry()
-  // state5::on_entry()
+  expect(5 == c_.entries.size());
+  expect(1 == c_.entries[0]);
+  expect(2 == c_.entries[1]);
+  expect(3 == c_.entries[2]);
+  expect(4 == c_.entries[3]);
+  expect(5 == c_.entries[4]);
 };
 
 test defer_and_anonymous = [] {
   struct c {
-    auto operator()() const noexcept {
+    auto operator()() {
       using namespace msm;
-
       // clang-format off
       return make_transition_table(
        *"state1"_s + event<event1> / defer,
-        "state1"_s + on_entry / [] {std::cout << "state1 on entry" << std::endl; },
+        "state1"_s + on_entry / [this] { entries.emplace_back(1); },
         "state1"_s + event<event2> = "state2"_s,
         "state2"_s  = "state3"_s,
-        "state2"_s + on_entry / [] {std::cout << "state2 on entry" << std::endl; },
+        "state2"_s + on_entry / [this] { entries.emplace_back(2); },
         "state3"_s + event<event1> = "state4"_s,
-        "state4"_s + on_entry / [] {std::cout << "state4 on entry" << std::endl; },
-        "state3"_s + on_entry / [] {std::cout << "state3 on entry" << std::endl; },
+        "state4"_s + on_entry / [this] { entries.emplace_back(4); },
+        "state3"_s + on_entry / [this] { entries.emplace_back(3); },
         "state2"_s + event<event1> = "state5"_s,
-        "state5"_s + on_entry / [] {std::cout << "state5 on entry" << std::endl; }
+        "state5"_s + on_entry / [this] { entries.emplace_back(5); }
       );
       // clang-format on
     }
+
+    std::vector<int> entries;
   };
 
-  msm::sm<c, msm::defer_queue<std::queue>> sm;
+  c c_;
+  msm::sm<c, msm::defer_queue<std::queue>> sm{c_};
   sm.process_event(event1());
   sm.process_event(event2());
 
-  // state1::on_entry()
-  // state2::on_entry()
-  // state3::on_entry()
-  // state4::on_entry()
+  expect(4 == c_.entries.size());
+  expect(1 == c_.entries[0]);
+  expect(2 == c_.entries[1]);
+  expect(3 == c_.entries[2]);
+  expect(4 == c_.entries[3]);
 };

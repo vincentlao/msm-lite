@@ -6,6 +6,7 @@
 #include "boost/msm-lite/front/state.hpp"
 #include "boost/msm-lite/front/operators.hpp"
 #include "boost/msm-lite/front/actions/defer.hpp"
+#include "boost/msm-lite/front/actions/queue.hpp"
 #include "boost/msm-lite/front/transition.hpp"
 
 template <class TEvent>
@@ -47,6 +48,7 @@ struct defer_queue : aux::pair<detail::defer_queue_policy__, defer_queue<T>> {
 __attribute__((unused)) static detail::state<detail::terminate_state> X;
 __attribute__((unused)) static detail::history_state H;
 __attribute__((unused)) static detail::defer defer;
+__attribute__((unused)) static detail::queue queue;
 template <class... Ts, BOOST_MSM_LITE_REQUIRES(aux::is_same<aux::bool_list<aux::always<Ts>::value...>,
                                                             aux::bool_list<concepts::transitional<Ts>::value...>>::value)>
 auto make_transition_table(Ts... ts) {

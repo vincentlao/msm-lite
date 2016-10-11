@@ -1247,6 +1247,20 @@ struct defer {
 };
 }
 namespace detail {
+struct queue {
+  template <class TEvent>
+  struct queue_impl {
+    template <class T>
+    void operator()(const T &) {}
+    TEvent event;
+  };
+  template <class TEvent>
+  auto operator()(const TEvent &event) {
+    return queue_impl<TEvent>{event};
+  }
+};
+}
+namespace detail {
 struct always {
   status operator()() const { return status::HANDLED; }
   aux::byte _[0];
@@ -1534,6 +1548,7 @@ struct defer_queue : aux::pair<detail::defer_queue_policy__, defer_queue<T>> {
 __attribute__((unused)) static detail::state<detail::terminate_state> X;
 __attribute__((unused)) static detail::history_state H;
 __attribute__((unused)) static detail::defer defer;
+__attribute__((unused)) static detail::queue queue;
 template <class... Ts, BOOST_MSM_LITE_REQUIRES(aux::is_same<aux::bool_list<aux::always<Ts>::value...>,
                                                             aux::bool_list<concepts::transitional<Ts>::value...>>::value)>
 auto make_transition_table(Ts... ts) {

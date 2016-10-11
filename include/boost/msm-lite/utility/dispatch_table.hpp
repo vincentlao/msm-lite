@@ -77,7 +77,8 @@ template <class TEvent, int EventRangeBegin, int EventRangeEnd, class SM,
           BOOST_MSM_LITE_REQUIRES(concepts::dispatchable<TEvent, typename sm<SM>::events>::value)>
 auto make_dispatch_table(sm<SM> &fsm) {
   static_assert(EventRangeEnd - EventRangeBegin > 0, "Event ids range difference has to be greater than 0");
-  return detail::make_dispatch_table<TEvent, EventRangeBegin>(fsm, aux::make_index_sequence<EventRangeEnd - EventRangeBegin + 1>{});
+  return detail::make_dispatch_table<TEvent, EventRangeBegin>(fsm,
+                                                              aux::make_index_sequence<EventRangeEnd - EventRangeBegin + 1>{});
 }
 
 BOOST_MSM_LITE_NAMESPACE_END

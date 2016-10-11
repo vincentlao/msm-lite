@@ -1096,12 +1096,6 @@ struct state<TState(TExplicitStates...)> : state_impl<state<TState(TExplicitStat
 }
 namespace detail {
 struct operator_base {};
-struct fsm {
-  using sm = fsm;
-  using thread_safety_policy = no_policy;
-  using defer_queue_policy = no_policy;
-  auto operator()() { return aux::pool<>{}; }
-};
 template <class, class>
 aux::type_list<> args_impl__(...);
 template <class T, class>
@@ -1111,18 +1105,13 @@ auto args_impl__(int) -> aux::function_traits_t<decltype(&T::template operator()
 template <class T, class>
 auto args_impl__(int) -> aux::function_traits_t<decltype(&T::operator())>;
 template <class T, class E>
-auto args__(...) -> decltype(args_impl__<T, E>(0));
-template <class T, class E>
-auto args__(int) -> aux::function_traits_t<decltype(&T::template operator() < fsm, E >)>;
-template <class T, class E>
-using args_t = decltype(args__<T, E>(0));
+using args_t = decltype(args_impl__<T, E>(0));
 template <class, class>
 struct ignore;
 template <class E, class... Ts>
 struct ignore<E, aux::type_list<Ts...>> {
-  using type = aux::join_t<aux::conditional_t<aux::is_same<E, aux::remove_reference_t<Ts>>::value ||
-                                                  aux::is_same<sm<fsm>, aux::remove_reference_t<Ts>>::value,
-                                              aux::type_list<>, aux::type_list<Ts>>...>;
+  using type = aux::join_t<
+      aux::conditional_t<aux::is_same<E, aux::remove_reference_t<Ts>>::value, aux::type_list<>, aux::type_list<Ts>>...>;
 };
 template <class T, class E, class = void>
 struct get_deps {
@@ -1135,9 +1124,7 @@ struct get_deps<T<Ts...>, E, aux::enable_if_t<aux::is_base_of<operator_base, T<T
   using type = aux::join_t<get_deps_t<Ts, E>...>;
 };
 template <class T, class TEvent, class TDeps, class SM,
-          aux::enable_if_t<!aux::is_same<TEvent, aux::remove_reference_t<T>>::value &&
-                               !aux::is_same<sm<fsm>, aux::remove_reference_t<T>>::value,
-                           int> = 0>
+          aux::enable_if_t<!aux::is_same<TEvent, aux::remove_reference_t<T>>::value, int> = 0>
 decltype(auto) get_arg(const TEvent &, TDeps &deps, SM &) {
   return aux::get<T>(deps);
 }
@@ -1145,11 +1132,6 @@ template <class T, class TEvent, class TDeps, class SM,
           aux::enable_if_t<aux::is_same<TEvent, aux::remove_reference_t<T>>::value, int> = 0>
 decltype(auto) get_arg(const TEvent &event, TDeps &, SM &) {
   return event;
-}
-template <class T, class TEvent, class TDeps, class SM,
-          aux::enable_if_t<aux::is_same<sm<fsm>, aux::remove_reference_t<T>>::value, int> = 0>
-decltype(auto) get_arg(const TEvent &, TDeps &, SM &sm) {
-  return sm;
 }
 template <class... Ts, class T, class TEvent, class TDeps, class SM,
           aux::enable_if_t<!aux::is_base_of<operator_base, T>::value, int> = 0>
@@ -1254,25 +1236,9 @@ auto operator,(const T1 &t1, const T2 &t2) {
   return detail::seq_<aux::zero_wrapper<T1>, aux::zero_wrapper<T2>>(aux::zero_wrapper<T1>{t1}, aux::zero_wrapper<T2>{t2});
 }
 namespace detail {
-struct process_event {
-  template <class TEvent>
-  struct process_event_impl {
-    template <class SM, class T>
-    void operator()(sm<SM> &sm, const T &) {
-      sm.process_event(event);
-    }
-    TEvent event;
-  };
-  template <class TEvent>
-  auto operator()(const TEvent &event) {
-    return process_event_impl<TEvent>{event};
-  }
-};
-}
-namespace detail {
 struct defer {
-  template <class SM, class T>
-  void operator()(sm<SM> &, const T &) {}
+  template <class TEvent>
+  void operator()(const TEvent &) {}
 };
 }
 namespace detail {
@@ -1562,7 +1528,6 @@ struct defer_queue : aux::pair<detail::defer_queue_policy__, defer_queue<T>> {
 };
 __attribute__((unused)) static detail::state<detail::terminate_state> X;
 __attribute__((unused)) static detail::history_state H;
-__attribute__((unused)) static detail::process_event process_event;
 __attribute__((unused)) static detail::defer defer;
 template <class... Ts, BOOST_MSM_LITE_REQUIRES(aux::is_same<aux::bool_list<aux::always<Ts>::value...>,
                                                             aux::bool_list<concepts::transitional<Ts>::value...>>::value)>

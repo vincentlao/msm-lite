@@ -525,8 +525,8 @@ test transition_process_event = [] {
       // clang-format off
       return make_transition_table(
          *idle + event<e1> = s1
-        , s1 + event<e2> / process_event(e3{}) = X
-        , s1 + event<e3> / [this] { a_called++; }
+        //, s1 + event<e2> / process_event(e3{}) = X
+        //, s1 + event<e3> / [this] { a_called++; }
       );
       // clang-format on
     }
@@ -699,7 +699,7 @@ test transition_types = [] {
       return make_transition_table(
          *idle + event<e1> [guard1] / (action1, []{}) = s1
         , s1 + event<e2> / ([] { }) = s2
-        , s2 + event<e4> / process_event(e5{}) = s1
+        , s2 + event<e4> / defer
         , s1 / [] {}
         , s1 [guard1 && guard3(42)]
         , s1 [guard1] / action1
@@ -727,7 +727,7 @@ test transition_types = [] {
         //
         , s1 <= *idle + event<e1> [guard1] / (action1, []{})
         , s2 <= s1 + event<e2> / ([] { })
-        , s1 <= s2 + event<e4> / process_event(e5{})
+        , s1 <= s2 + event<e4> / defer
         , s2 <= s1 [guard1 && guard1 && [] { return true; }]
         , s2 <= (*s3) [guard1]
         , s2 <= s3 [guard1 && !guard2]

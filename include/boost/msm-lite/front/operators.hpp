@@ -5,13 +5,6 @@ namespace detail {
 
 struct operator_base {};
 
-struct fsm {
-  using sm = fsm;
-  using thread_safety_policy = no_policy;
-  using defer_queue_policy = no_policy;
-  auto operator()() { return aux::pool<>{}; }
-};
-
 template <class, class>
 aux::type_list<> args_impl__(...);
 template <class T, class>
@@ -21,18 +14,12 @@ auto args_impl__(int) -> aux::function_traits_t<decltype(&T::template operator()
 template <class T, class>
 auto args_impl__(int) -> aux::function_traits_t<decltype(&T::operator())>;
 template <class T, class E>
-auto args__(...) -> decltype(args_impl__<T, E>(0));
-template <class T, class E>
-auto args__(int) -> aux::function_traits_t<decltype(&T::template operator() < fsm, E >)>;
-template <class T, class E>
-using args_t = decltype(args__<T, E>(0));
+using args_t = decltype(args_impl__<T, E>(0));
 template <class, class>
 struct ignore;
 template <class E, class... Ts>
 struct ignore<E, aux::type_list<Ts...>> {
-  using type = aux::join_t<aux::conditional_t<aux::is_same<E, aux::remove_reference_t<Ts>>::value ||
-                                                  aux::is_same<sm<fsm>, aux::remove_reference_t<Ts>>::value,
-                                              aux::type_list<>, aux::type_list<Ts>>...>;
+  using type = aux::join_t<aux::conditional_t<aux::is_same<E, aux::remove_reference_t<Ts>>::value, aux::type_list<>, aux::type_list<Ts>>...>;
 };
 template <class T, class E, class = void>
 struct get_deps {
@@ -45,9 +32,7 @@ struct get_deps<T<Ts...>, E, aux::enable_if_t<aux::is_base_of<operator_base, T<T
   using type = aux::join_t<get_deps_t<Ts, E>...>;
 };
 template <class T, class TEvent, class TDeps, class SM,
-          aux::enable_if_t<!aux::is_same<TEvent, aux::remove_reference_t<T>>::value &&
-                               !aux::is_same<sm<fsm>, aux::remove_reference_t<T>>::value,
-                           int> = 0>
+          aux::enable_if_t<!aux::is_same<TEvent, aux::remove_reference_t<T>>::value, int> = 0>
 decltype(auto) get_arg(const TEvent &, TDeps &deps, SM &) {
   return aux::get<T>(deps);
 }
@@ -55,11 +40,6 @@ template <class T, class TEvent, class TDeps, class SM,
           aux::enable_if_t<aux::is_same<TEvent, aux::remove_reference_t<T>>::value, int> = 0>
 decltype(auto) get_arg(const TEvent &event, TDeps &, SM &) {
   return event;
-}
-template <class T, class TEvent, class TDeps, class SM,
-          aux::enable_if_t<aux::is_same<sm<fsm>, aux::remove_reference_t<T>>::value, int> = 0>
-decltype(auto) get_arg(const TEvent &, TDeps &, SM &sm) {
-  return sm;
 }
 #if defined(BOOST_MSM_LITE_LOG_ENABLED)
 template <class... Ts, class T, class TEvent, class TDeps, class SM>

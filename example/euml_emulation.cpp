@@ -29,15 +29,15 @@ struct data {
 };
 
 struct {
-  template <class FSM, class TEvent>
-  bool operator()(msm::sm<FSM>&, const TEvent&, data& d) const noexcept {
+  template <class TEvent>
+  bool operator()(const TEvent&, data& d) const noexcept {
     return d.get() == 42;
   }
 } guard;
 
 struct {
-  template <class FSM, class TEvent>
-  void operator()(msm::sm<FSM>&, const TEvent&, data& d) noexcept {
+  template <class TEvent>
+  void operator()(const TEvent&, data& d) noexcept {
     d.set(123);
   }
 } action;

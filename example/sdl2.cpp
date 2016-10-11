@@ -8,6 +8,7 @@
 #include <cassert>
 #include <iostream>
 #include "boost/msm-lite.hpp"
+#include "boost/msm-lite/utility/dispatch_table.hpp"
 
 namespace msm = boost::msm::lite;
 

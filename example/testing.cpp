@@ -7,6 +7,7 @@
 //
 #include <cassert>
 #include "boost/msm-lite.hpp"
+#include "boost/msm-lite/testing/state_machine.hpp"
 
 namespace msm = boost::msm::lite;
 

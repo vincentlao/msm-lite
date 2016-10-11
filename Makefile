@@ -53,12 +53,6 @@ example/errors/%.out:
 example/%.out:
 	$(CXX) example/$*.cpp $(CXXFLAGS) -I include -o example/$*.out && $($(MEMCHECK)) example/$*.out
 
-example/testing.out:
-	#FIXME
-
-example/dispatch_table.out:
-	#FIXME
-
 example/error_handling.out:
 	#FIXME
 
@@ -66,15 +60,6 @@ example/logging.out:
 	#FIXME
 
 example/transitions.out:
-	#FIXME
-
-example/plant_uml.out:
-	#FIXME
-
-example/euml_emulation.out:
-	#FIXME
-
-example/sdl2.out:
 	#FIXME
 
 style_check:

@@ -59,37 +59,107 @@ struct sub {
   }
 };
 
-struct c {
-  c(int){}
-  auto operator()() {
-    using namespace msm;
-    return make_transition_table(
-      *"idle"_s + event<e1> / [](int&) { std::cout << "action" << std::endl; } = state<sub>,
-      state<sub> + event<e6> / [] { std::cout << "exit" << std::endl; } = X
-    );
-  }
-};
+/*struct c {*/
+  //c(int){}
+  //auto operator()() {
+    //using namespace msm;
+    //return make_transition_table(
+      //*"idle"_s + event<e1> / [](int&) { std::cout << "action" << std::endl; } = state<sub>,
+      //state<sub> + event<e6> / [] { std::cout << "exit" << std::endl; } = X
+    //);
+  //}
+/*};*/
 
 
 template<class> struct q;
 
+  struct sub_1 {
+    auto operator()() noexcept {
+      using namespace msm;
+      // clang-format off
+      return make_transition_table(
+        *"ls1_1"_s + event<e1> = "ls1_2"_s
+       , "ls1_2"_s + event<e2> = "ls1_1"_s
+       , "ls1_1"_s + msm::on_entry / [this] { ls1_1_entry = true; }
+       , "ls1_1"_s + msm::on_exit  / [this] { ls1_1_exit = true; }
+       , "ls1_2"_s + msm::on_entry / [this] { ls1_2_entry = true; }
+       , "ls1_2"_s + msm::on_exit  / [this] { ls1_2_exit = true; }
+      );
+      // clang-format on
+    }
+
+    bool ls1_1_entry = false;
+    bool ls1_1_exit = false;
+    bool ls1_2_entry = false;
+    bool ls1_2_exit = false;
+  };
+
+  struct sub_2 {
+    auto operator()() noexcept {
+      using namespace msm;
+      // clang-format off
+      return make_transition_table(
+        *"ls2_1"_s + event<e1> = "ls2_2"_s
+       , "ls2_2"_s + event<e2> = "ls2_1"_s
+       , "ls2_1"_s + msm::on_entry / [this] { ls2_1_entry = true; }
+       , "ls2_1"_s + msm::on_exit  / [this] { ls2_1_exit = true; }
+       , "ls2_2"_s + msm::on_entry / [this] { ls2_2_entry = true; }
+       , "ls2_2"_s + msm::on_exit  / [this] { ls2_2_exit = true; }
+      );
+      // clang-format on
+    }
+
+    bool ls2_1_entry = false;
+    bool ls2_1_exit = false;
+    bool ls2_2_entry = false;
+    bool ls2_2_exit = false;
+  };
+
+  struct c {
+    auto operator()() noexcept {
+      using namespace msm;
+
+      // clang-format off
+      return make_transition_table(
+        *state<sub_1> + event<e3> = state<sub_2>
+       , state<sub_2> + event<e4> = state<sub_1>
+       , state<sub_1> + msm::on_entry / [this] { sub1_entry = true; }
+       , state<sub_1> + msm::on_exit  / [this] { sub1_exit = true; }
+       , state<sub_2> + msm::on_entry / [this] { sub2_entry = true; }
+       , state<sub_2> + msm::on_exit  / [this] { sub2_exit = true; }
+      );
+      // clang-format on
+    }
+
+    bool sub1_entry = false;
+    bool sub1_exit = false;
+    bool sub2_entry = false;
+    bool sub2_exit = false;
+  };
+
+
 int main() {
-  c c_{42};
-  sub s_;
-  int i = 2;
-  sub2 s2{false, false};
-  double d = 2.0;
-  //msm::sm<c&(sub&)> sm{c_, s_, d, i};
 
-  //q<typename msm::sm<c>::states_ids_t>{};
+  c c_;
+  sub_1 s1;
+  sub_2 s2;
+  msm::sm<c> sm{c_, s1, s2};
+/*  c c_{42};*/
+  //sub s_;
+  //int i = 2;
+  //sub2 s2{false, false};
+  //double d = 2.0;
+  ////msm::sm<c&(sub&)> sm{c_, s_, d, i};
 
-  msm::sm<c> sm{d, i, c_, s2};
-  std::cout << s2.blah << std::endl;
-  sm.process_event(e1{});
-  sm.process_event(e2{});
-  sm.process_event(e3{});
-  sm.process_event(e4{});
-  sm.process_event(e5{});
-  sm.process_event(e6{});
-  std::cout << s2.blah << std::endl;
+  ////q<typename msm::sm<c>::states_ids_t>{};
+
+  //msm::sm<c> sm{d, i, c_, s2};
+  //std::cout << s2.blah << std::endl;
+  //sm.process_event(e1{});
+  //sm.process_event(e2{});
+  //sm.process_event(e3{});
+  //sm.process_event(e4{});
+  //sm.process_event(e5{});
+  //sm.process_event(e6{});
+  /*std::cout << s2.blah << std::endl;*/
 }

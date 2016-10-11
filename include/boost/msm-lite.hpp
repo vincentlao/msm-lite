@@ -550,7 +550,7 @@ struct terminate_state {};
 struct history_state {};
 template <class>
 struct state;
-template <class S>
+template <class>
 class stringable {};
 template <class TState>
 struct stringable<state<TState>> {

@@ -336,7 +336,7 @@ struct zero_wrapper_impl<TExpr, aux::type_list<TArgs...>> {
 template <class TExpr>
 struct zero_wrapper<TExpr, void_t<decltype(+declval<TExpr>())>>
     : zero_wrapper_impl<TExpr, aux::function_traits_t<decltype(&TExpr::operator())>> {
-  explicit zero_wrapper(...) {}
+  zero_wrapper(...) {}
 };
 }  // aux
 

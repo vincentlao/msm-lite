@@ -36,7 +36,7 @@ struct on_exit : internal_event {
 
 struct thread_safety_policy {};
 struct exception_safe_policy {};
-struct defer_queue_policy {};
+struct defer_queue_policy__ {};
 
 struct no_policy {
   using type = no_policy;
@@ -232,7 +232,7 @@ struct sm_policy {
   using sm = SM;
   using thread_safety_policy = decltype(get_policy<detail::thread_safety_policy>((aux::inherit<TPolicies...> *)0));
   using exception_safe_policy = decltype(get_policy<detail::exception_safe_policy>((aux::inherit<TPolicies...> *)0));
-  using defer_queue_policy = decltype(get_policy<defer_queue_policy>((aux::inherit<TPolicies...> *)0));
+  using defer_queue_policy = decltype(get_policy<defer_queue_policy__>((aux::inherit<TPolicies...> *)0));
 };
 template <class>
 struct get_sub_sm : aux::type_list<> {};

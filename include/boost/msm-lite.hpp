@@ -343,7 +343,7 @@ struct zero_wrapper_impl<TExpr, aux::type_list<TArgs...>> {
 template <class TExpr>
 struct zero_wrapper<TExpr, void_t<decltype(+declval<TExpr>())>>
     : zero_wrapper_impl<TExpr, aux::function_traits_t<decltype(&TExpr::operator())>> {
-  explicit zero_wrapper(...) {}
+  zero_wrapper(...) {}
 };
 }
 namespace detail {
@@ -434,7 +434,7 @@ struct on_exit : internal_event {
 };
 struct thread_safety_policy {};
 struct exception_safe_policy {};
-struct defer_queue_policy {};
+struct defer_queue_policy__ {};
 struct no_policy {
   using type = no_policy;
   template <class>
@@ -627,7 +627,7 @@ struct sm_policy {
   using sm = SM;
   using thread_safety_policy = decltype(get_policy<detail::thread_safety_policy>((aux::inherit<TPolicies...> *)0));
   using exception_safe_policy = decltype(get_policy<detail::exception_safe_policy>((aux::inherit<TPolicies...> *)0));
-  using defer_queue_policy = decltype(get_policy<defer_queue_policy>((aux::inherit<TPolicies...> *)0));
+  using defer_queue_policy = decltype(get_policy<defer_queue_policy__>((aux::inherit<TPolicies...> *)0));
 };
 template <class>
 struct get_sub_sm : aux::type_list<> {};
@@ -1545,7 +1545,7 @@ struct thread_safe : aux::pair<detail::thread_safety_policy, thread_safe<T>> {
 };
 struct exception_safe : aux::pair<detail::exception_safe_policy, exception_safe> {};
 template <template <class...> class T>
-struct defer_queue : aux::pair<detail::defer_queue_policy, defer_queue<T>> {
+struct defer_queue : aux::pair<detail::defer_queue_policy__, defer_queue<T>> {
   template <class U>
   using rebind = T<U>;
 };

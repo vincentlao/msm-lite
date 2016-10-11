@@ -965,9 +965,6 @@ class sm {
 };
 }
 namespace detail {
-struct on_entry;
-struct on_exit;
-struct terminate_state;
 template <class...>
 struct transition;
 template <class, class>
@@ -978,47 +975,8 @@ template <class, class>
 struct transition_eg;
 template <class, class>
 struct transition_ea;
-struct defer {
-  template <class SM, class T>
-  void operator()(sm<SM> &, const T &) {}
-};
-struct process_event {
-  template <class TEvent>
-  struct process_event_impl {
-    template <class SM, class T>
-    void operator()(sm<SM> &sm, const T &) {
-      sm.process_event(event);
-    }
-    TEvent event;
-  };
-  template <class TEvent>
-  auto operator()(const TEvent &event) {
-    return process_event_impl<TEvent>{event};
-  }
-};
-template <class T>
-inline status ret_status() {
-  return status::HANDLED;
 }
-template <>
-inline status ret_status<aux::zero_wrapper<defer>>() {
-  return status::DEFFERED;
-}
-struct operator_base {};
-struct always {
-  status operator()() const { return status::HANDLED; }
-  aux::byte _[0];
-};
-struct none {
-  void operator()() {}
-  aux::byte _[0];
-};
-struct fsm {
-  using sm = fsm;
-  using thread_safety_policy = no_policy;
-  using defer_queue_policy = no_policy;
-  auto operator()() { return aux::pool<>{}; }
-};
+namespace detail {
 template <class>
 struct event {
   template <class T, typename aux::enable_if<concepts::callable<bool, T>::value, int>::type = 0>
@@ -1030,16 +988,8 @@ struct event {
     return transition_ea<event, aux::zero_wrapper<T>>{*this, aux::zero_wrapper<T>{t}};
   }
 };
-template <class T>
-struct exception {
-  using type = T;
-  T exception;
-};
-template <class TEvent>
-struct unexpected_event {
-  using type = TEvent;
-  TEvent event;
-};
+}
+namespace detail {
 struct initial_state {};
 struct terminate_state {};
 struct history_state {};
@@ -1130,6 +1080,15 @@ struct state<TState(TExplicitStates...)> : state_impl<state<TState(TExplicitStat
   using explicit_states = aux::type_list<TExplicitStates...>;
   static constexpr auto initial = false;
   static constexpr auto history = false;
+};
+}
+namespace detail {
+struct operator_base {};
+struct fsm {
+  using sm = fsm;
+  using thread_safety_policy = no_policy;
+  using defer_queue_policy = no_policy;
+  auto operator()() { return aux::pool<>{}; }
 };
 template <class, class>
 aux::type_list<> args_impl__(...);
@@ -1262,6 +1221,75 @@ class not_ : operator_base {
  private:
   T g;
 };
+}
+template <class T, typename aux::enable_if<concepts::callable<bool, T>::value, int>::type = 0>
+auto operator!(const T &t) {
+  return detail::not_<aux::zero_wrapper<T>>(aux::zero_wrapper<T>{t});
+}
+template <class T1, class T2,
+          typename aux::enable_if<concepts::callable<bool, T1>::value && concepts::callable<bool, T2>::value, int>::type = 0>
+auto operator&&(const T1 &t1, const T2 &t2) {
+  return detail::and_<aux::zero_wrapper<T1>, aux::zero_wrapper<T2>>(aux::zero_wrapper<T1>{t1}, aux::zero_wrapper<T2>{t2});
+}
+template <class T1, class T2,
+          typename aux::enable_if<concepts::callable<bool, T1>::value && concepts::callable<bool, T2>::value, int>::type = 0>
+auto operator||(const T1 &t1, const T2 &t2) {
+  return detail::or_<aux::zero_wrapper<T1>, aux::zero_wrapper<T2>>(aux::zero_wrapper<T1>{t1}, aux::zero_wrapper<T2>{t2});
+}
+template <class T1, class T2,
+          typename aux::enable_if<concepts::callable<void, T1>::value && concepts::callable<void, T2>::value, int>::type = 0>
+auto operator,(const T1 &t1, const T2 &t2) {
+  return detail::seq_<aux::zero_wrapper<T1>, aux::zero_wrapper<T2>>(aux::zero_wrapper<T1>{t1}, aux::zero_wrapper<T2>{t2});
+}
+namespace detail {
+struct process_event {
+  template <class TEvent>
+  struct process_event_impl {
+    template <class SM, class T>
+    void operator()(sm<SM> &sm, const T &) {
+      sm.process_event(event);
+    }
+    TEvent event;
+  };
+  template <class TEvent>
+  auto operator()(const TEvent &event) {
+    return process_event_impl<TEvent>{event};
+  }
+};
+}
+namespace detail {
+struct defer {
+  template <class SM, class T>
+  void operator()(sm<SM> &, const T &) {}
+};
+}
+namespace detail {
+struct always {
+  status operator()() const { return status::HANDLED; }
+  aux::byte _[0];
+};
+struct none {
+  void operator()() {}
+  aux::byte _[0];
+};
+template <class...>
+struct transition;
+template <class, class>
+struct transition_sg;
+template <class, class>
+struct transition_sa;
+template <class, class>
+struct transition_eg;
+template <class, class>
+struct transition_ea;
+template <class T>
+inline status ret_status() {
+  return status::HANDLED;
+}
+template <>
+inline status ret_status<aux::zero_wrapper<defer>>() {
+  return status::DEFFERED;
+}
 template <class E, class G>
 struct transition<event<E>, G> {
   template <class T>
@@ -1495,25 +1523,6 @@ struct transition<state<S1>, state<S2>, event<E>, always, none> {
   }
   aux::byte _[0];
 };
-}
-template <class T, typename aux::enable_if<concepts::callable<bool, T>::value, int>::type = 0>
-auto operator!(const T &t) {
-  return detail::not_<aux::zero_wrapper<T>>(aux::zero_wrapper<T>{t});
-}
-template <class T1, class T2,
-          typename aux::enable_if<concepts::callable<bool, T1>::value && concepts::callable<bool, T2>::value, int>::type = 0>
-auto operator&&(const T1 &t1, const T2 &t2) {
-  return detail::and_<aux::zero_wrapper<T1>, aux::zero_wrapper<T2>>(aux::zero_wrapper<T1>{t1}, aux::zero_wrapper<T2>{t2});
-}
-template <class T1, class T2,
-          typename aux::enable_if<concepts::callable<bool, T1>::value && concepts::callable<bool, T2>::value, int>::type = 0>
-auto operator||(const T1 &t1, const T2 &t2) {
-  return detail::or_<aux::zero_wrapper<T1>, aux::zero_wrapper<T2>>(aux::zero_wrapper<T1>{t1}, aux::zero_wrapper<T2>{t2});
-}
-template <class T1, class T2,
-          typename aux::enable_if<concepts::callable<void, T1>::value && concepts::callable<void, T2>::value, int>::type = 0>
-auto operator,(const T1 &t1, const T2 &t2) {
-  return detail::seq_<aux::zero_wrapper<T1>, aux::zero_wrapper<T2>>(aux::zero_wrapper<T1>{t1}, aux::zero_wrapper<T2>{t2});
 }
 template <class TEvent>
 detail::event<TEvent> event{};

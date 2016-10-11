@@ -39,8 +39,7 @@ pph() {
   echo '
     BOOST_MSM_LITE_NAMESPACE_BEGIN
     #include "boost/msm-lite/back/state_machine.hpp"
-    #include "boost/msm-lite/aux_/utility.hpp"
-    #include "boost/msm-lite/front/front.hpp"' > tmp.hpp
+    #include "boost/msm-lite/front/transition_table.hpp"' > tmp.hpp
   cpp -C -P -nostdinc -I. -DBOOST_DI_INJECT_HPP tmp.hpp 2>/dev/null | \
     sed "s/\/\/\/\///" | \
     sed "s/[ $]*#define/##define/g" | \

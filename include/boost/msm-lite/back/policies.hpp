@@ -15,6 +15,6 @@ struct no_policy {
   aux::byte _[0];
 };
 
-} // detail
+}  // detail
 
 #endif

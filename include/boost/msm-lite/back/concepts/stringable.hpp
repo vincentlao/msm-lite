@@ -11,6 +11,6 @@ template <class T, class = void>
 struct stringable : aux::false_type {};
 template <class T>
 struct stringable<T, decltype(void(sizeof(T)))> : decltype(test_stringable(aux::declval<T>())) {};
-} // concepts
+}  // concepts
 
 #endif

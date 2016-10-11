@@ -15,7 +15,7 @@ class state_machine : public detail::sm<TSM> {
 
   template <class... TStates>
   void set_current_states(const detail::state<TStates> &...) {
-    auto& sm = static_cast<aux::pool_type<detail::sm_impl<TSM>> &>(detail::sm<TSM>::sub_sms_).value;
+    auto &sm = static_cast<aux::pool_type<detail::sm_impl<TSM>> &>(detail::sm<TSM>::sub_sms_).value;
     auto region = 0;
     int _[]{0, (sm.current_state_[region++] = aux::get_id<states_ids_t, 0, TStates>(), 0)...};
     (void)_;

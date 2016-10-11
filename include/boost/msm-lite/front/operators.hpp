@@ -6,20 +6,21 @@ namespace detail {
 struct operator_base {};
 
 template <class, class>
-aux::type_list<> args_impl__(...);
+aux::type_list<> args__(...);
 template <class T, class>
-auto args_impl__(int) -> aux::function_traits_t<T>;
+auto args__(int) -> aux::function_traits_t<T>;
 template <class T, class E>
-auto args_impl__(int) -> aux::function_traits_t<decltype(&T::template operator() < E >)>;
+auto args__(int) -> aux::function_traits_t<decltype(&T::template operator() < E >)>;
 template <class T, class>
-auto args_impl__(int) -> aux::function_traits_t<decltype(&T::operator())>;
+auto args__(int) -> aux::function_traits_t<decltype(&T::operator())>;
 template <class T, class E>
-using args_t = decltype(args_impl__<T, E>(0));
+using args_t = decltype(args__<T, E>(0));
 template <class, class>
 struct ignore;
 template <class E, class... Ts>
 struct ignore<E, aux::type_list<Ts...>> {
-  using type = aux::join_t<aux::conditional_t<aux::is_same<E, aux::remove_reference_t<Ts>>::value, aux::type_list<>, aux::type_list<Ts>>...>;
+  using type = aux::join_t<
+      aux::conditional_t<aux::is_same<E, aux::remove_reference_t<Ts>>::value, aux::type_list<>, aux::type_list<Ts>>...>;
 };
 template <class T, class E, class = void>
 struct get_deps {
@@ -151,7 +152,7 @@ class not_ : operator_base {
   T g;
 };
 
-} // detail
+}  // detail
 
 template <class T, BOOST_MSM_LITE_REQUIRES(concepts::callable<bool, T>::value)>
 auto operator!(const T &t) {

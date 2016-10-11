@@ -14,6 +14,6 @@ struct transition_eg;
 template <class, class>
 struct transition_ea;
 
-} // detail
+}  // detail
 
 #endif

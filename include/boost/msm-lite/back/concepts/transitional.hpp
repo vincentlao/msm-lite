@@ -26,6 +26,6 @@ auto transitional_impl(T &&t) -> is_valid_transition<typename T::src_state, type
 template <class T>
 struct transitional : decltype(transitional_impl(aux::declval<T>())) {};
 
-} // concepts
+}  // concepts
 
 #endif

@@ -8,7 +8,7 @@ struct queue {
   struct queue_impl {
     template <class T>
     void operator()(const T &) {
-      //sm.process_event(event);
+      // sm.process_event(event);
     }
 
     TEvent event;
@@ -20,6 +20,6 @@ struct queue {
   }
 };
 
-} // detail
+}  // detail
 
 #endif

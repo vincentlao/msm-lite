@@ -10,6 +10,6 @@ template <class>
 void configurable_impl(...);
 template <class T>
 struct configurable : aux::is_pool<decltype(configurable_impl<T>(0))> {};
-} // concepts
+}  // concepts
 
 #endif

@@ -414,9 +414,9 @@ struct event;
 template <class>
 struct exception;
 template <class...>
-struct transition_impl;
+struct transitions;
 template <class...>
-struct transition_sub_impl;
+struct transitions_sub;
 template <class, class>
 struct state_mappings;
 template <class S, class... Ts>
@@ -480,13 +480,13 @@ struct mappings<aux::pool<Ts...>>
 template <class T>
 using mappings_t = typename mappings<T>::type;
 template <class>
-transition_impl<> get_state_mapping_impl(...);
+transitions<> get_state_mapping_impl(...);
 template <class T, class... Ts>
-transition_impl<Ts...> get_state_mapping_impl(state_mappings<T, aux::type_list<Ts...>> *);
+transitions<Ts...> get_state_mapping_impl(state_mappings<T, aux::type_list<Ts...>> *);
 template <class S>
-transition_sub_impl<S> get_sub_state_mapping_impl(...);
+transitions_sub<S> get_sub_state_mapping_impl(...);
 template <class T, class... Ts>
-transition_sub_impl<T, Ts...> get_sub_state_mapping_impl(state_mappings<T, aux::type_list<Ts...>> *);
+transitions_sub<T, Ts...> get_sub_state_mapping_impl(state_mappings<T, aux::type_list<Ts...>> *);
 template <class T, class U>
 struct get_state_mapping {
   using type = decltype(get_state_mapping_impl<T>((U *)0));
@@ -498,7 +498,7 @@ struct get_state_mapping<sm<T>, U> {
 template <class T, class U>
 using get_state_mapping_t = typename get_state_mapping<T, U>::type;
 template <class>
-transition_impl<> get_event_mapping_impl(...);
+transitions<> get_event_mapping_impl(...);
 template <class T, class TMappings>
 TMappings get_event_mapping_impl(event_mappings<T, TMappings> *);
 template <class T, class U>
@@ -507,21 +507,21 @@ using get_event_mapping_t = decltype(get_event_mapping_impl<T>((U *)0));
 namespace detail {
 enum class status { HANDLED, NOT_HANDLED, DEFFERED };
 template <class...>
-struct transition_impl;
+struct transitions;
 template <class...>
-struct transition_sub_impl;
+struct transitions_sub;
 template <class T, class... Ts>
-struct transition_impl<T, Ts...> {
+struct transitions<T, Ts...> {
   template <class SM, class TEvent>
   static status execute(SM &self, const TEvent &event, aux::byte &current_state) {
     if (aux::get<T>(self.me_.transitions_).execute(self, event, current_state) != status::NOT_HANDLED) {
       return status::HANDLED;
     }
-    return transition_impl<Ts...>::execute(self, event, current_state);
+    return transitions<Ts...>::execute(self, event, current_state);
   }
 };
 template <class T>
-struct transition_impl<T> {
+struct transitions<T> {
   template <class SM, class TEvent>
   static status execute(SM &self, const TEvent &event, aux::byte &current_state) {
     return aux::get<T>(self.me_.transitions_).execute(self, event, current_state);
@@ -538,22 +538,22 @@ struct transition_impl<T> {
   }
 };
 template <>
-struct transition_impl<> {
+struct transitions<> {
   template <class SM, class TEvent>
   static status execute(SM &, const TEvent &, aux::byte &) {
     return status::NOT_HANDLED;
   }
 };
 template <class TSM, class T, class... Ts>
-struct transition_sub_impl<sm<TSM>, T, Ts...> {
+struct transitions_sub<sm<TSM>, T, Ts...> {
   template <class SM, class TEvent>
   static status execute(SM &self, const TEvent &event, aux::byte &current_state) {
     const auto handled = aux::try_get<sm_impl<TSM>>(&self.sub_sms_).process_event(event, self.deps_, self.sub_sms_);
-    return handled != status::NOT_HANDLED ? handled : transition_impl<T, Ts...>::execute(self, event, current_state);
+    return handled != status::NOT_HANDLED ? handled : transitions<T, Ts...>::execute(self, event, current_state);
   }
 };
 template <class TSM>
-struct transition_sub_impl<sm<TSM>> {
+struct transitions_sub<sm<TSM>> {
   template <class SM, class TEvent>
   static status execute(SM &self, const TEvent &event, aux::byte &) {
     return aux::try_get<sm_impl<TSM>>(&self.sub_sms_).process_event(event, self.deps_, self.sub_sms_);
@@ -658,9 +658,9 @@ class sm_impl {
   template <class...>
   friend struct transition;
   template <class...>
-  friend struct transition_impl;
+  friend struct transitions;
   template <class...>
-  friend struct transition_sub_impl;
+  friend struct transitions_sub;
   template <template <class> class, class>
   friend struct sm_inject;
 
@@ -1102,15 +1102,15 @@ struct state<TState(TExplicitStates...)> : state_impl<state<TState(TExplicitStat
 namespace detail {
 struct operator_base {};
 template <class, class>
-aux::type_list<> args_impl__(...);
+aux::type_list<> args__(...);
 template <class T, class>
-auto args_impl__(int) -> aux::function_traits_t<T>;
+auto args__(int) -> aux::function_traits_t<T>;
 template <class T, class E>
-auto args_impl__(int) -> aux::function_traits_t<decltype(&T::template operator() < E >)>;
+auto args__(int) -> aux::function_traits_t<decltype(&T::template operator() < E >)>;
 template <class T, class>
-auto args_impl__(int) -> aux::function_traits_t<decltype(&T::operator())>;
+auto args__(int) -> aux::function_traits_t<decltype(&T::operator())>;
 template <class T, class E>
-using args_t = decltype(args_impl__<T, E>(0));
+using args_t = decltype(args__<T, E>(0));
 template <class, class>
 struct ignore;
 template <class E, class... Ts>

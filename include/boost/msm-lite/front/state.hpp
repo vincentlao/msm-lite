@@ -95,6 +95,6 @@ struct state<TState(TExplicitStates...)> : state_impl<state<TState(TExplicitStat
   static constexpr auto history = false;
 };
 
-} // detail
+}  // detail
 
 #endif

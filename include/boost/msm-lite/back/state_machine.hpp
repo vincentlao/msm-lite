@@ -8,8 +8,8 @@
 #include "boost/msm-lite/back/concepts/stringable.hpp"
 #include "boost/msm-lite/back/concepts/transitional.hpp"
 #include "boost/msm-lite/back/mappings.hpp"
-#include "boost/msm-lite/back/transitions.hpp"
 #include "boost/msm-lite/back/policies.hpp"
+#include "boost/msm-lite/back/transitions.hpp"
 
 namespace detail {
 
@@ -101,9 +101,9 @@ class sm_impl {
   template <class...>
   friend struct transition;
   template <class...>
-  friend struct transition_impl;
+  friend struct transitions;
   template <class...>
-  friend struct transition_sub_impl;
+  friend struct transitions_sub;
   template <template <class> class, class>
   friend struct sm_inject;
 
@@ -192,12 +192,13 @@ class sm_impl {
   }
 
   template <class TSelf, class TEvent>
-  status process_event_no_deffer(TSelf& self, const TEvent &event) {
+  status process_event_no_deffer(TSelf &self, const TEvent &event) {
     BOOST_MSM_LITE_LOG(process_event, sm_raw_t, event);
 #if defined(__cpp_exceptions) || defined(__EXCEPTIONS)
     return process_event_noexcept(event, self, aux::integral_constant<bool, is_noexcept>{});
 #else
-    return process_event_impl<get_event_mapping_t<TEvent, mappings_t>>(event, self, states_t{}, aux::make_index_sequence<regions>{});
+    return process_event_impl<get_event_mapping_t<TEvent, mappings_t>>(event, self, states_t{},
+                                                                       aux::make_index_sequence<regions>{});
 #endif
     process_internal_event(self, anonymous{});
   }
@@ -293,10 +294,10 @@ class sm_impl {
 #endif
 
   template <class TSelf, class TEvent>
-  void process_defer_events(TSelf&, const status &, const TEvent &, const aux::type<detail::no_policy> &) {}
+  void process_defer_events(TSelf &, const status &, const TEvent &, const aux::type<detail::no_policy> &) {}
 
   template <class TSelf, class TEvent, class T>
-  void process_defer_events(TSelf& self, const status &handled, const TEvent &event, const aux::type<T> &) {
+  void process_defer_events(TSelf &self, const status &handled, const TEvent &event, const aux::type<T> &) {
     if (handled == status::DEFFERED) {
       defer_.push(event);
     } else {
@@ -465,9 +466,7 @@ class sm {
     start(aux::type<sub_sms_t>{});
   }
 
-  explicit sm(deps_t &deps) : deps_(deps), sub_sms_{deps} {
-    start(aux::type<sub_sms_t>{});
-  }
+  explicit sm(deps_t &deps) : deps_(deps), sub_sms_{deps} { start(aux::type<sub_sms_t>{}); }
 
   template <class TEvent>
   status process_event(const TEvent &event) {

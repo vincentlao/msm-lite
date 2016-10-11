@@ -5,8 +5,8 @@ namespace detail {
 
 struct defer {
   template <class TEvent>
-  void operator()(const TEvent &) { }
+  void operator()(const TEvent &) {}
 };
 
-} // detail
+}  // detail
 #endif

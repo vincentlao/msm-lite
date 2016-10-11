@@ -7,6 +7,7 @@ struct always {
   status operator()() const { return status::HANDLED; }
   aux::byte _[0];
 };
+
 struct none {
   void operator()() {}
   aux::byte _[0];
@@ -266,6 +267,6 @@ struct transition<state<S1>, state<S2>, event<E>, always, none> {
   aux::byte _[0];
 };
 
-} // detail
+}  // detail
 
 #endif

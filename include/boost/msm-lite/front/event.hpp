@@ -28,6 +28,6 @@ struct unexpected_event {
   TEvent event;
 };
 
-} // detail
+}  // detail
 
 #endif

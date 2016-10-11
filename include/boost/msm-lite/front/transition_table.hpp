@@ -1,12 +1,12 @@
 #ifndef TRANSITION_TABLE_WKRWV6N0
 #define TRANSITION_TABLE_WKRWV6N0
 
-#include "boost/msm-lite/front/fwd.hpp"
-#include "boost/msm-lite/front/event.hpp"
-#include "boost/msm-lite/front/state.hpp"
-#include "boost/msm-lite/front/operators.hpp"
 #include "boost/msm-lite/front/actions/defer.hpp"
 #include "boost/msm-lite/front/actions/queue.hpp"
+#include "boost/msm-lite/front/event.hpp"
+#include "boost/msm-lite/front/fwd.hpp"
+#include "boost/msm-lite/front/operators.hpp"
+#include "boost/msm-lite/front/state.hpp"
 #include "boost/msm-lite/front/transition.hpp"
 
 template <class TEvent>

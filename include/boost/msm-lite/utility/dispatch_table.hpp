@@ -71,7 +71,7 @@ auto make_dispatch_table(sm<SM> &fsm, const aux::index_sequence<Ns...> &) {
     return dispatch_table[id - EventRangeBegin](fsm, event);
   };
 }
-} // detail
+}  // detail
 
 template <class TEvent, int EventRangeBegin, int EventRangeEnd, class SM,
           BOOST_MSM_LITE_REQUIRES(concepts::dispatchable<TEvent, typename sm<SM>::events>::value)>

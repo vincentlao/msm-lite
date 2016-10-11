@@ -8,8 +8,8 @@
 #include <string>
 #include <utility>
 #include "boost/msm-lite.hpp"
-#include "boost/msm-lite/utility/dispatch_table.hpp"
 #include "boost/msm-lite/testing/state_machine.hpp"
+#include "boost/msm-lite/utility/dispatch_table.hpp"
 // clang-format off
 #if __has_include(<boost/di.hpp>)
 // clang-format on

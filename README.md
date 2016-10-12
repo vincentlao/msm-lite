@@ -26,7 +26,7 @@ auto guard = [] { return true; };
 auto action = [] { std::cout << "action" << std::endl; };
 
 struct hello_world {
-  auto operator()() const noexcept {
+  auto operator()() const {
     using namespace msm;
     return make_transition_table(
        *"idle"_s + event<e1> = "s1"_s

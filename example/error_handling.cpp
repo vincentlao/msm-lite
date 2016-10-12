@@ -13,13 +13,12 @@
 namespace msm = boost::msm::lite;
 
 struct error_handling {
-  auto operator()() const /*noexcept*/ {  // noexcept will call terminate
+  auto operator()() const {
     using namespace msm;
     // clang-format off
     return make_transition_table(
        *"idle"_s + "event1"_t / [] { throw std::runtime_error{"error"}; }
       , "idle"_s + "event2"_t / [] { throw 0; }
-
       , *"error_handling"_s + exception<std::runtime_error> / [] { std::cout << "exception caught" << std::endl; }
       ,  "error_handling"_s + exception<> / [] { std::cout << "generic exception caught, terminate..." << std::endl; } = X
     );

@@ -56,9 +56,6 @@ example/errors/%.out:
 example/%.out:
 	$(CXX) example/$*.cpp $(CXXFLAGS) -I include -o example/$*.out && $($(MEMCHECK)) example/$*.out
 
-example/error_handling.out:
-	#FIXME
-
 example/logging.out:
 	#FIXME
 

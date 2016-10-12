@@ -8,7 +8,7 @@ struct defer_queue_policy__ {};
 struct logger_policy__ {};
 
 template <class, class, class TDeps, class TEvent>
-void log_process_event(const aux::false_type&, TDeps&, const TEvent&) { }
+void log_process_event(const aux::false_type&, TDeps&, const TEvent&) {}
 
 template <class TLogger, class SM, class TDeps, class TEvent>
 void log_process_event(const aux::true_type&, TDeps& deps, const TEvent& event) {
@@ -32,7 +32,7 @@ void log_action(const aux::true_type&, TDeps& deps, const TAction& action, const
 }
 
 template <class, class, class TDeps, class TGuard, class TEvent>
-void log_guard(const aux::false_type&, TDeps&, const TGuard&, const TEvent&, bool) { }
+void log_guard(const aux::false_type&, TDeps&, const TGuard&, const TEvent&, bool) {}
 
 template <class TLogger, class SM, class TDeps, class TGuard, class TEvent>
 void log_guard(const aux::true_type&, TDeps& deps, const TGuard& guard, const TEvent& event, bool result) {

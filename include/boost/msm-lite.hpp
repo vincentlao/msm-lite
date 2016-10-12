@@ -646,12 +646,10 @@ TPolicy get_policy(aux::pair<T, TPolicy> *);
 template <template <class> class, class T>
 struct sm_inject {
   using sm = T;
-  using all = aux::type_list<T>;
 };
 template <template <class> class TRebind, class T, class... Ts>
 struct sm_inject<TRebind, T(Ts...)> {
   using sm = T;
-  using all = aux::join_t<aux::type_list<T, Ts...>, typename TRebind<Ts>::deps...>;
 };
 template <class SM, class... TPolicies>
 struct sm_policy {
@@ -667,13 +665,9 @@ struct get_sub_sm<sm<T>> : aux::join_t<aux::type_list<T>, typename sm<T>::sub_sm
 template <class... Ts>
 using get_sub_sms = aux::join_t<typename get_sub_sm<Ts>::type...>;
 template <class... Ts>
+using get_sm_t = aux::type_list<typename Ts::sm...>;
+template <class... Ts>
 using merge_deps = aux::join_t<typename Ts::deps...>;
-template <class T, class TDeps, class = void>
-struct is_required : aux::false_type {
-  static_assert(aux::is_same<T, void>::value, "");
-};
-template <class T, class TDeps>
-struct is_required<T, TDeps, aux::enable_if_t<aux::is_base_of<aux::pool_type<T>, TDeps>::value>> : aux::true_type {};
 template <class TSM>
 class sm_impl {
   template <class>
@@ -991,14 +985,16 @@ class sm {
     using type = aux::type_list<sm_impl<Ts>...>;
   };
   using sub_sms = aux::apply_t<get_sub_sms, states_t>;
+  using sm_all_t = aux::apply_t<aux::inherit, aux::join_t<aux::type_list<sm_raw_t>, aux::apply_t<get_sm_t, sub_sms>>>;
   using sub_sms_t =
       aux::apply_t<aux::pool, typename convert<aux::join_t<aux::type_list<TSM>, aux::apply_t<get_sub_sms, states_t>>>::type>;
   using deps = aux::apply_t<merge_deps, transitions_t>;
   using deps_t = aux::apply_t<
       aux::pool, aux::apply_t<aux::unique_t, aux::join_t<deps, aux::type_list<logger_t>, aux::apply_t<merge_deps, sub_sms_t>>>>;
   template <class... TDeps>
-  using dependable =
-      aux::is_same<aux::bool_list<aux::always<TDeps>::value...>, aux::bool_list<is_required<TDeps, deps_t>::value...>>;
+  using dependable = aux::is_same<aux::bool_list<aux::always<TDeps>::value...>,
+                                  aux::bool_list<aux::is_base_of<aux::remove_reference_t<TDeps>, sm_all_t>::value ||
+                                                 aux::is_base_of<aux::pool_type<TDeps>, deps_t>::value...>>;
 
  public:
   using states = typename sm_impl<TSM>::states_t;
@@ -1007,7 +1003,7 @@ class sm {
   sm(sm &&) = default;
   sm(const sm &) = delete;
   sm &operator=(const sm &) = delete;
-  template <class... TDeps>
+  template <class... TDeps, BOOST_MSM_LITE_REQUIRES(dependable<TDeps...>::value)>
   explicit sm(TDeps &&... deps) : deps_{aux::init{}, aux::pool<TDeps...>{deps...}}, sub_sms_{aux::pool<TDeps...>{deps...}} {
     start(aux::type<sub_sms_t>{});
   }

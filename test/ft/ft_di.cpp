@@ -14,9 +14,14 @@
 namespace di = boost::di;
 namespace msm = boost::msm::lite;
 
+struct e1 {};
+struct e2 {};
+const auto idle = msm::state<class idle>;
+const auto s1 = msm::state<class s1>;
+
 test di_minimal = [] {
   struct c {
-    auto operator()() noexcept {
+    auto operator()() const {
       using namespace msm;
       return make_transition_table(*idle + event<e1> / [](int i) { expect(42 == i); });
     }
@@ -71,7 +76,7 @@ test di_complex = [] {
   };
 
   struct c {
-    auto operator()() noexcept {
+    auto operator()() const {
       using namespace msm;
 
       auto guard1 = [](int i, const auto &, double d) {

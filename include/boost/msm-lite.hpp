@@ -1080,12 +1080,22 @@ struct unexpected_event {
 }
 namespace detail {
 struct operator_base {};
+template <class TEvent>
+struct event_type {
+  using type = TEvent;
+};
+template <class TEvent>
+struct event_type<exception<TEvent>> {
+  using type = TEvent;
+};
+template <class TEvent>
+using event_type_t = typename event_type<TEvent>::type;
 template <class, class>
 aux::type_list<> args__(...);
 template <class T, class>
 auto args__(int) -> aux::function_traits_t<T>;
 template <class T, class E>
-auto args__(int) -> aux::function_traits_t<decltype(&T::template operator() < E >)>;
+auto args__(int) -> aux::function_traits_t<decltype(&T::template operator() < event_type_t<E>>)>;
 template <class T, class>
 auto args__(int) -> aux::function_traits_t<decltype(&T::operator())>;
 template <class T, class E>
@@ -1094,8 +1104,8 @@ template <class, class>
 struct ignore;
 template <class E, class... Ts>
 struct ignore<E, aux::type_list<Ts...>> {
-  using type = aux::join_t<
-      aux::conditional_t<aux::is_same<E, aux::remove_reference_t<Ts>>::value, aux::type_list<>, aux::type_list<Ts>>...>;
+  using type = aux::join_t<aux::conditional_t<aux::is_same<event_type_t<E>, aux::remove_reference_t<Ts>>::value,
+                                              aux::type_list<>, aux::type_list<Ts>>...>;
 };
 template <class T, class E, class = void>
 struct get_deps {
@@ -1111,6 +1121,10 @@ template <class T, class TEvent, class TDeps, class SM,
           aux::enable_if_t<!aux::is_same<TEvent, aux::remove_reference_t<T>>::value, int> = 0>
 decltype(auto) get_arg(const TEvent &, TDeps &deps, SM &) {
   return aux::get<T>(deps);
+}
+template <class, class TEvent, class TDeps, class SM>
+decltype(auto) get_arg(const exception<TEvent> &event, TDeps &, SM &) {
+  return event.exception;
 }
 template <class T, class TEvent, class TDeps, class SM,
           aux::enable_if_t<aux::is_same<TEvent, aux::remove_reference_t<T>>::value, int> = 0>

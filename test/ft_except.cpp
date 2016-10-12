@@ -46,7 +46,7 @@ test exception_data_minimal = [] {
   struct c {
     auto operator()() const {
       using namespace msm;
-      auto guard = [](const auto& ex) { return ex.exception.value == 42; }; // TODO get rid of .exception
+      auto guard = [](const auto& ex) { return ex.value == 42; }; // TODO get rid of .exception
 
       // clang-format off
       return make_transition_table(

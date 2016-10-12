@@ -12,7 +12,10 @@
 > Your scalable C++14 header only eUML-like Meta State Machine library with no dependencies ([__Try it online!__](http://boost-experimental.github.io/msm-lite/examples/index.html#hello-world))
 
 ```cpp
+#include <cassert>
+#include <iostream>
 #include <boost/msm-lite.hpp>
+
 namespace msm = boost::msm::lite;
 
 struct e1 {};
@@ -23,21 +26,12 @@ auto guard = [] { return true; };
 auto action = [] { std::cout << "action" << std::endl; };
 
 struct hello_world {
-  auto opeartor()() const noexcept {
+  auto operator()() const noexcept {
     using namespace msm;
-
-    // Postfix Notation
     return make_transition_table(
        *"idle"_s + event<e1> = "s1"_s
       , "s1"_s   + event<e2> [ guard ] / action = "s2"_s
-      , "s2"_s   + event<e3> / [] { std::cout << "action" << std::endl; } = X
-    );
-
-    // Prefix Notation
-    return make_transition_table(
-       "s1"_s <= *"idle"_s + event<e1>
-     , "s2"_s <=  "s1"_s   + event<e2> [ guard ] / action
-     , X      <=  "s2"_s   + event<e3> / [] { std::cout << "action" << std::endl; }
+      , "s2"_s   + event<e3> / [] { std::cout << "in place action" << std::endl; } = X
     );
   }
 };
@@ -46,11 +40,11 @@ int main() {
   msm::sm<hello_world> sm;
   using namespace msm;
   assert(sm.is("idle"_s));
-  assert(sm.process_event(e1{}));
+  sm.process_event(e1{});
   assert(sm.is("s1"_s));
-  assert(sm.process_event(e2{}));
+  sm.process_event(e2{});
   assert(sm.is("s2"_s));
-  assert(sm.process_event(e3{}));
+  sm.process_event(e3{});
   assert(sm.is(X));
 }
 ```

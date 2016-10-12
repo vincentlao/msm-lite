@@ -51,7 +51,7 @@ int main() {
 ```
 
 ```sh
-sizeof(sm): 1 b
+sizeof(sm): 1b
 guard
 action
 in place action

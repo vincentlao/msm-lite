@@ -19,7 +19,7 @@ auto guard = [] { return true; };
 auto action = [] { std::cout << "action" << std::endl; };
 
 struct hello_world {
-  auto configure() const noexcept {
+  auto opeartor()() const noexcept {
     using namespace msm;
 
     // Postfix Notation
@@ -65,6 +65,7 @@ int main() {
     * [What 'lite' implies?](http://boost-experimental.github.io/msm-lite/index.html#what-lite-implies)
     * [*Supported* UML features](http://boost-experimental.github.io/msm-lite/index.html#supported-uml-features)
     * [*Additional* features](http://boost-experimental.github.io/msm-lite/index.html#additional-features)
+    * [Related materials](http://boost-experimental.github.io/msm-lite/index.html#related-materials)
     * [Acknowledgements](http://boost-experimental.github.io/msm-lite/index.html#acknowledgements)
 * [Overview](http://boost-experimental.github.io/msm-lite/overview/index.html)
     * [Quick Start](http://boost-experimental.github.io/msm-lite/overview/index.html#quick-start)
@@ -95,9 +96,9 @@ int main() {
     * [event [core]](http://boost-experimental.github.io/msm-lite/user_guide/index.html#event-core)
     * [make_transition_table [state machine]](http://boost-experimental.github.io/msm-lite/user_guide/index.html#make_transition_table-state-machine)
     * [sm [state machine]](http://boost-experimental.github.io/msm-lite/user_guide/index.html#sm-state-machine)
+    * [policies [state machine]](http://boost-experimental.github.io/msm-lite/user_guide/index.html#policies-state-machine)
     * [testing::sm [testing]](http://boost-experimental.github.io/msm-lite/user_guide/index.html#testingsm-testing)
     * [make_dispatch_table [utility]](http://boost-experimental.github.io/msm-lite/user_guide/index.html#make_dispatch_table-utility)
-    * [BOOST_MSM_LITE_LOG [debugging]](http://boost-experimental.github.io/msm-lite/user_guide/index.html#boost_msm_lite_log-debugging)
 * [Examples](http://boost-experimental.github.io/msm-lite/examples/index.html)
     * [Hello World](http://boost-experimental.github.io/msm-lite/examples/index.html#hello-world)
     * [Events](http://boost-experimental.github.io/msm-lite/examples/index.html#events)
@@ -116,6 +117,7 @@ int main() {
     * [SDL2 Integration](http://boost-experimental.github.io/msm-lite/examples/index.html#sdl2-integration)
     * [Plant UML Integration](http://boost-experimental.github.io/msm-lite/examples/index.html#plant-uml-integration)
 * [CHANGELOG](http://boost-experimental.github.io/msm-lite/CHANGELOG/index.html)
+    * [ [1.1.0] - 2016-XX-XX](http://boost-experimental.github.io/msm-lite/CHANGELOG/index.html#-110-2016-xx-xx)
     * [ [1.0.1] - 2016-05-06](http://boost-experimental.github.io/msm-lite/CHANGELOG/index.html#-101-2016-05-06)
     * [[1.0.0] - 2016-01-28](http://boost-experimental.github.io/msm-lite/CHANGELOG/index.html#100-2016-01-28)
 * [TODO](http://boost-experimental.github.io/msm-lite/TODO/index.html)

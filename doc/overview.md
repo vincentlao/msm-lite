@@ -34,12 +34,11 @@ git clone https://github.com/boost-experimental/msm-lite && cd msm-lite && make 
 | Macro                                                         | Description                                                  |
 | --------------------------------------------------------------|--------------------------------------------------------------|
 | `BOOST_MSM_LITE_VERSION`                                      | Current version of Boost.MSM-lite (ex. 1'0'0)                |
-| [`BOOST_MSM_LITE_LOG`](user_guide.md#boost_msm_log-debugging) | Enables logging system  (see [Logging](examples.md#logging)) |
+
 
 ###Exception Safety
 
 * Boost.MSM-lite doesn't use exceptions internally and therefore might be compiled with `-fno-exceptions`.
-* Check [User Guide](user_guide.md) to verify which API's are marked `noexcept`.
 * If guard/action throws an exception [State Machine](user_guide.md##sm-state-machine) will stay in a current state.
 * Exceptions might be caught using transition table via `exception` event. See [Error handling](tutorial.md#8-error-handling).
 
@@ -48,13 +47,12 @@ git clone https://github.com/boost-experimental/msm-lite && cd msm-lite && make 
 * Boost.MSM-lite is not thread safe by default.
   * Thread Safety might be enabled by defining a thread_safe policy when creating a State Machine
 
-  ```cpp
-  struct example {
-    auto configure() const noexcept;
-  };
-  msm::sm<example, thread_safe<std::recursive_mutex>> sm;
-  sm.process_event(event{}); // thread safe call
-  ```
+```cpp
+msm::sm<example, msm::thread_safe<std::recursive_mutex>> sm;
+sm.process_event(event{}); // thread safe call
+```
+
+* See [Thread Safe Policy](user_guide.md#policies)
 
 ###Error messages
 

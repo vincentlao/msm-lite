@@ -22,8 +22,8 @@ struct e1 {};
 struct e2 {};
 struct e3 {};
 
-auto guard = [] { return true; };
-auto action = [] { std::cout << "action" << std::endl; };
+const auto guard = [] { std::cout << "guard" << '\n'; return true; };
+const auto action = [] { std::cout << "action" << '\n'; };
 
 struct hello_world {
   auto operator()() const {
@@ -31,13 +31,14 @@ struct hello_world {
     return make_transition_table(
        *"idle"_s + event<e1> = "s1"_s
       , "s1"_s   + event<e2> [ guard ] / action = "s2"_s
-      , "s2"_s   + event<e3> / [] { std::cout << "in place action" << std::endl; } = X
+      , "s2"_s   + event<e3> / [] { std::cout << "in place action" << '\n'; } = X
     );
   }
 };
 
 int main() {
   msm::sm<hello_world> sm;
+  std::cout << "sizeof(sm): " << sizeof(sm) << "b" << '\n';
   using namespace msm;
   assert(sm.is("idle"_s));
   sm.process_event(e1{});
@@ -47,6 +48,13 @@ int main() {
   sm.process_event(e3{});
   assert(sm.is(X));
 }
+```
+
+```sh
+sizeof(sm): 1 b
+guard
+action
+in place action
 ```
 
 ---------------------------------------

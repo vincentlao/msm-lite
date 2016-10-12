@@ -17,8 +17,8 @@ struct error_handling {
     using namespace msm;
     // clang-format off
     return make_transition_table(
-       *"idle"_s + "event1"_t / [] { throw std::runtime_error{"error"}; }
-      , "idle"_s + "event2"_t / [] { throw 0; }
+       *"idle"_s + "event1"_e / [] { throw std::runtime_error{"error"}; }
+      , "idle"_s + "event2"_e / [] { throw 0; }
       , *"error_handling"_s + exception<std::runtime_error> / [] { std::cout << "exception caught" << std::endl; }
       ,  "error_handling"_s + exception<> / [] { std::cout << "generic exception caught, terminate..." << std::endl; } = X
     );
@@ -29,9 +29,9 @@ struct error_handling {
 int main() {
   using namespace msm;
   sm<error_handling> sm;
-  sm.process_event("event1"_t);
+  sm.process_event("event1"_e);
   assert(sm.is("idle"_s, "error_handling"_s));
-  sm.process_event("event2"_t);
+  sm.process_event("event2"_e);
   assert(sm.is("idle"_s, X));
   assert(sm.is(X));  // any region is terminated
 }

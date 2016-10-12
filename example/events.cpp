@@ -25,7 +25,7 @@ struct events {
     return make_transition_table(
        *"idle"_s + event<e1> = "s1"_s
       , "s1"_s + event2 [guard] = "s2"_s
-      , "s2"_s + "e3"_t = "s3"_s
+      , "s2"_s + "e3"_e = "s3"_s
       , "s3"_s + event<int> / [] (int i) { assert(42 == i); } = X
     );
     // clang-format on
@@ -37,7 +37,7 @@ int main() {
   using namespace msm;
   sm.process_event(e1{});
   sm.process_event(e2{});
-  sm.process_event("e3"_t);
+  sm.process_event("e3"_e);
   sm.process_event(42);
   assert(sm.is(X));
 }

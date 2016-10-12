@@ -24,9 +24,9 @@ test events = [] {
       using namespace msm;
       // clang-format off
       return make_transition_table(
-          *"idle"_s + "e1"_t = "s1"_s
-        , "s1"_s + "e2"_t = "s2"_s
-        , "s2"_s + "e3"_t / [](auto) { } = X
+          *"idle"_s + "e1"_e = "s1"_s
+        , "s1"_s + "e2"_e = "s2"_s
+        , "s2"_s + "e3"_e / [](auto) { } = X
       );
       // clang-format on
     }
@@ -34,10 +34,10 @@ test events = [] {
 
   msm::sm<c> sm;
   using namespace msm;
-  sm.process_event("e1"_t);
+  sm.process_event("e1"_e);
   expect(sm.is("s1"_s));
-  sm.process_event("e2"_t);
+  sm.process_event("e2"_e);
   expect(sm.is("s2"_s));
-  sm.process_event("e3"_t);
+  sm.process_event("e3"_e);
   expect(sm.is(X));
 };

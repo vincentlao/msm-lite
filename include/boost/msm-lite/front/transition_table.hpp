@@ -31,7 +31,7 @@ auto operator""_s() {
   return detail::state<aux::string<Chrs...>>{};
 }
 template <class T, T... Chrs>
-auto operator""_t() {
+auto operator""_e() {
   return event<aux::string<Chrs...>>;
 }
 #endif

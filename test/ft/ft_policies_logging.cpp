@@ -52,7 +52,7 @@ test logging = [] {
       using namespace msm;
       // clang-format off
       return make_transition_table(
-          *"idle"_s + "e1"_t = s1
+          *"idle"_s + "e1"_e = s1
         , s1 + event<e2> = X
       );
       // clang-format on
@@ -61,7 +61,7 @@ test logging = [] {
 
   msm::sm<c, msm::logger<my_logger>> sm;
   using namespace msm;
-  sm.process_event("e1"_t);
+  sm.process_event("e1"_e);
   sm.process_event(e2{});
   expect(messages_out.size() == messages_expected.size());
   expect(std::equal(messages_out.begin(), messages_out.end(), messages_expected.begin()));
@@ -88,7 +88,7 @@ test logging_entry_exit = [] {
       using namespace msm;
       // clang-format off
       return make_transition_table(
-          *"idle"_s + "e1"_t = s1
+          *"idle"_s + "e1"_e = s1
         , s1 + msm::on_entry / [](){}
         , s1 + msm::on_exit / [](){}
         , s1 + event<e2> = X
@@ -99,7 +99,7 @@ test logging_entry_exit = [] {
 
   msm::sm<c, msm::logger<my_logger>> sm;
   using namespace msm;
-  sm.process_event("e1"_t);
+  sm.process_event("e1"_e);
   sm.process_event(e2{});
   expect(messages_out.size() == messages_expected.size());
   expect(std::equal(messages_out.begin(), messages_out.end(), messages_expected.begin()));

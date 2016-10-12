@@ -3,9 +3,9 @@
 
 namespace detail {
 
-struct thread_safety_policy {};
+struct thread_safety_policy__ {};
 struct defer_queue_policy__ {};
-struct logger_policy {};
+struct logger_policy__ {};
 
 template <class, class>
 void log_process_event(const aux::false_type&, ...) {}

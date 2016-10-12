@@ -36,7 +36,7 @@ auto operator""_t() {
 }
 #endif
 template <class T>
-struct thread_safe : aux::pair<detail::thread_safety_policy, thread_safe<T>> {
+struct thread_safe : aux::pair<detail::thread_safety_policy__, thread_safe<T>> {
   using type = T;
 };
 template <template <class...> class T>
@@ -45,7 +45,7 @@ struct defer_queue : aux::pair<detail::defer_queue_policy__, defer_queue<T>> {
   using rebind = T<U>;
 };
 template <class T>
-struct logger : aux::pair<detail::logger_policy, logger<T>> {
+struct logger : aux::pair<detail::logger_policy__, logger<T>> {
   using type = T;
 };
 __attribute__((unused)) static detail::state<detail::terminate_state> X;

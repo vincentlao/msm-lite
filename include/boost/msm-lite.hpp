@@ -504,9 +504,9 @@ template <class T, class U>
 using get_event_mapping_t = decltype(get_event_mapping_impl<T>((U *)0));
 }
 namespace detail {
-struct thread_safety_policy {};
+struct thread_safety_policy__ {};
 struct defer_queue_policy__ {};
-struct logger_policy {};
+struct logger_policy__ {};
 template <class, class>
 void log_process_event(const aux::false_type &, ...) {}
 template <class TLogger, class SM, class TDeps, class TEvent>
@@ -656,9 +656,9 @@ struct sm_inject<TRebind, T(Ts...)> {
 template <class SM, class... TPolicies>
 struct sm_policy {
   using sm = SM;
-  using thread_safety_policy = decltype(get_policy<detail::thread_safety_policy>((aux::inherit<TPolicies...> *)0));
+  using thread_safety_policy = decltype(get_policy<detail::thread_safety_policy__>((aux::inherit<TPolicies...> *)0));
   using defer_queue_policy = decltype(get_policy<defer_queue_policy__>((aux::inherit<TPolicies...> *)0));
-  using logger_policy = decltype(get_policy<logger_policy>((aux::inherit<TPolicies...> *)0));
+  using logger_policy = decltype(get_policy<logger_policy__>((aux::inherit<TPolicies...> *)0));
 };
 template <class>
 struct get_sub_sm : aux::type_list<> {};
@@ -1641,7 +1641,7 @@ auto operator""_t() {
   return event<aux::string<Chrs...>>;
 }
 template <class T>
-struct thread_safe : aux::pair<detail::thread_safety_policy, thread_safe<T>> {
+struct thread_safe : aux::pair<detail::thread_safety_policy__, thread_safe<T>> {
   using type = T;
 };
 template <template <class...> class T>
@@ -1650,7 +1650,7 @@ struct defer_queue : aux::pair<detail::defer_queue_policy__, defer_queue<T>> {
   using rebind = T<U>;
 };
 template <class T>
-struct logger : aux::pair<detail::logger_policy, logger<T>> {
+struct logger : aux::pair<detail::logger_policy__, logger<T>> {
   using type = T;
 };
 __attribute__((unused)) static detail::state<detail::terminate_state> X;

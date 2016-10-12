@@ -77,9 +77,9 @@ struct sm_inject<TRebind, T(Ts...)> {
 template <class SM, class... TPolicies>
 struct sm_policy {
   using sm = SM;
-  using thread_safety_policy = decltype(get_policy<detail::thread_safety_policy>((aux::inherit<TPolicies...> *)0));
+  using thread_safety_policy = decltype(get_policy<detail::thread_safety_policy__>((aux::inherit<TPolicies...> *)0));
   using defer_queue_policy = decltype(get_policy<defer_queue_policy__>((aux::inherit<TPolicies...> *)0));
-  using logger_policy = decltype(get_policy<logger_policy>((aux::inherit<TPolicies...> *)0));
+  using logger_policy = decltype(get_policy<logger_policy__>((aux::inherit<TPolicies...> *)0));
 };
 template <class>
 struct get_sub_sm : aux::type_list<> {};

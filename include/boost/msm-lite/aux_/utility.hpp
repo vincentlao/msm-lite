@@ -112,11 +112,11 @@ aux::remove_reference_t<T> try_get(...) {
   return {};
 }
 template <class T>
-T& try_get(pool_type<T> *object) {
+T &try_get(pool_type<T> *object) {
   return static_cast<pool_type<T> &>(*object).value;
 }
 template <class T>
-T& try_get(pool_type<T &> *object) {
+T &try_get(pool_type<T &> *object) {
   return static_cast<pool_type<T &> &>(*object).value;
 }
 template <class T, class TPool>

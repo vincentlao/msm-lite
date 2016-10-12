@@ -535,5 +535,3 @@ test composite_with_orthogonal_regions_explicit_entry_deduce_region = [] {
   expect(sm.is(msm::state<sub>));
   // expect(subsm.is(idle, s3));
 };
-
-

@@ -41,4 +41,3 @@ test events = [] {
   sm.process_event("e3"_t);
   expect(sm.is(X));
 };
-

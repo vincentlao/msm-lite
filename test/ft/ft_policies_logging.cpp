@@ -1,6 +1,6 @@
+#include <boost/msm-lite.hpp>
 #include <sstream>
 #include <vector>
-#include <boost/msm-lite.hpp>
 
 namespace msm = boost::msm::lite;
 

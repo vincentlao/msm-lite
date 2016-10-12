@@ -203,7 +203,6 @@ test transition_with_action_and_guad_with_parameters_and_event = [] {
   expect(sm.is(s1));
 };
 
-
 test transitions = [] {
   struct c {
     auto operator()() noexcept {
@@ -648,5 +647,3 @@ test transition_types = [] {
   float f = 12.0;
   msm::sm<c> sm{f, 42, 87.0, 0.0f};
 };
-
-

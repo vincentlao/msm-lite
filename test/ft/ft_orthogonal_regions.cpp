@@ -25,7 +25,6 @@ const auto s2 = msm::state<class s2>;
 const auto s3 = msm::state<class s3>;
 const auto s4 = msm::state<class s4>;
 
-
 test orthogonal_regions = [] {
   struct c {
     auto operator()() noexcept {
@@ -118,4 +117,3 @@ test orthogonal_regions_entry_exit = [] {
   expect(c_.a_entry_action == 1);
   expect(c_.a_exit_action == 1);
 };
-

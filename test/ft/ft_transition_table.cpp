@@ -125,4 +125,3 @@ test uml_notation = [] {
   sm.process_event(e2{});
   expect(sm.is(msm::X));
 };
-

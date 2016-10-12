@@ -5,17 +5,17 @@ namespace detail {
 
 struct operator_base {};
 
-template<class TEvent>
+template <class TEvent>
 struct event_type {
   using type = TEvent;
 };
 
-template<class TEvent>
+template <class TEvent>
 struct event_type<exception<TEvent>> {
   using type = TEvent;
 };
 
-template<class TEvent>
+template <class TEvent>
 using event_type_t = typename event_type<TEvent>::type;
 
 template <class, class>
@@ -23,7 +23,7 @@ aux::type_list<> args__(...);
 template <class T, class>
 auto args__(int) -> aux::function_traits_t<T>;
 template <class T, class E>
-auto args__(int) -> aux::function_traits_t<decltype(&T::template operator() < event_type_t<E> >)>;
+auto args__(int) -> aux::function_traits_t<decltype(&T::template operator() < event_type_t<E>>)>;
 template <class T, class>
 auto args__(int) -> aux::function_traits_t<decltype(&T::operator())>;
 template <class T, class E>
@@ -32,8 +32,8 @@ template <class, class>
 struct ignore;
 template <class E, class... Ts>
 struct ignore<E, aux::type_list<Ts...>> {
-  using type = aux::join_t<
-      aux::conditional_t<aux::is_same<event_type_t<E>, aux::remove_reference_t<Ts>>::value, aux::type_list<>, aux::type_list<Ts>>...>;
+  using type = aux::join_t<aux::conditional_t<aux::is_same<event_type_t<E>, aux::remove_reference_t<Ts>>::value,
+                                              aux::type_list<>, aux::type_list<Ts>>...>;
 };
 template <class T, class E, class = void>
 struct get_deps {
@@ -63,13 +63,15 @@ template <class... Ts, class T, class TEvent, class TDeps, class SM>
 auto call_impl(const aux::type<void> &, const aux::type_list<Ts...> &, T object, const TEvent &event, TDeps &deps,
                sm_impl<SM> &self) {
   object(get_arg<Ts>(event, deps, self)...);
-  //log_action<typename sm_impl<SM>::logger_t, typename sm_impl<SM>::sm_raw_t>(typename sm_impl<SM>::has_logger{}, self.deps_, event);
+  // log_action<typename sm_impl<SM>::logger_t, typename sm_impl<SM>::sm_raw_t>(typename sm_impl<SM>::has_logger{}, self.deps_,
+  // event);
 }
 template <class... Ts, class T, class TEvent, class TDeps, class SM>
 auto call_impl(const aux::type<bool> &, const aux::type_list<Ts...> &, T object, const TEvent &event, TDeps &deps,
                sm_impl<SM> &self) {
   const auto result = object(get_arg<Ts>(event, deps, self)...);
-  //log_guard<typename sm_impl<SM>::logger_t, typename sm_impl<SM>::sm_raw_t>(typename sm_impl<SM>::has_logger{}, self.deps_, event, result);
+  // log_guard<typename sm_impl<SM>::logger_t, typename sm_impl<SM>::sm_raw_t>(typename sm_impl<SM>::has_logger{}, self.deps_,
+  // event, result);
   return result;
 }
 template <class... Ts, class T, class TEvent, class TDeps, class SM,

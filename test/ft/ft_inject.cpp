@@ -133,4 +133,3 @@ test di_complex = [] {
   expect(sm.is(msm::X));
 };
 #endif
-

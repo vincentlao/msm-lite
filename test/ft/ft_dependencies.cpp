@@ -69,4 +69,3 @@ test dependencies = [] {
     expect(sm.is(msm::X));
   }
 };
-

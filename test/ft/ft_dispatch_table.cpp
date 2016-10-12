@@ -151,5 +151,3 @@ test dispatch_runtime_event_sub_sm = [] {
     expect(1 == in_sub);
   }
 };
-
-

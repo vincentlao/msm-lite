@@ -20,7 +20,6 @@ pph() {
   echo "#define BOOST_MSM_LITE_VERSION ${version}'${revision}'${patch}"
   echo "#define BOOST_MSM_LITE_NAMESPACE_BEGIN namespace boost { namespace msm { namespace lite { inline namespace v${version}_${revision}_${patch} {"
   echo "#define BOOST_MSM_LITE_NAMESPACE_END }}}}"
-  echo "#define BOOST_MSM_LITE_LOG(...)"
   echo "#if !defined(__has_builtin)"
   echo "#define __has_builtin(...) 0"
   echo "#endif"

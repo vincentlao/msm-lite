@@ -19,7 +19,6 @@
   }                                  \
   }                                  \
   }
-#define BOOST_MSM_LITE_LOG(...)
 #if !defined(__has_builtin)
 #define __has_builtin(...) 0
 #endif
@@ -507,7 +506,31 @@ using get_event_mapping_t = decltype(get_event_mapping_impl<T>((U *)0));
 namespace detail {
 struct thread_safety_policy {};
 struct defer_queue_policy__ {};
-struct logging_policy {};
+struct logger_policy {};
+template <class, class>
+void log_process_event(const aux::false_type &, ...) {}
+template <class TLogger, class SM, class TDeps, class TEvent>
+void log_process_event(const aux::true_type &, TDeps &deps, const TEvent &event) {
+  return static_cast<aux::pool_type<TLogger> &>(deps).value.template log_process_event<SM>(event);
+}
+template <class, class>
+void log_state_change(const aux::false_type &, ...) {}
+template <class TLogger, class SM, class TDeps, class TSrcState, class TDstState>
+void log_state_change(const aux::true_type &, TDeps &deps, const TSrcState &src, const TDstState &dst) {
+  return static_cast<aux::pool_type<TLogger> &>(deps).value.template log_state_change<SM>(src, dst);
+}
+template <class, class>
+void log_action(const aux::false_type &, ...) {}
+template <class TLogger, class SM, class TDeps, class TAction, class TEvent>
+void log_action(const aux::true_type &, TDeps &deps, const TAction &action, const TEvent &event) {
+  return static_cast<aux::pool_type<TLogger> &>(deps).value.template log_action<SM>(action, event);
+}
+template <class, class>
+void log_guard(const aux::false_type &, ...) {}
+template <class TLogger, class SM, class TDeps, class TGuard, class TEvent>
+void log_guard(const aux::true_type &, TDeps &deps, const TGuard &guard, const TEvent &event, bool result) {
+  return static_cast<aux::pool_type<TLogger> &>(deps).value.template log_guard<SM>(guard, event, result);
+}
 struct no_policy {
   using type = no_policy;
   template <class>
@@ -635,6 +658,7 @@ struct sm_policy {
   using sm = SM;
   using thread_safety_policy = decltype(get_policy<detail::thread_safety_policy>((aux::inherit<TPolicies...> *)0));
   using defer_queue_policy = decltype(get_policy<defer_queue_policy__>((aux::inherit<TPolicies...> *)0));
+  using logger_policy = decltype(get_policy<logger_policy>((aux::inherit<TPolicies...> *)0));
 };
 template <class>
 struct get_sub_sm : aux::type_list<> {};
@@ -675,6 +699,8 @@ class sm_impl {
   using thread_safety_t = typename TSM::thread_safety_policy::type;
   template <class T>
   using defer_queue_t = typename TSM::defer_queue_policy::template rebind<T>;
+  using logger_t = typename TSM::logger_policy::type;
+  using has_logger = aux::integral_constant<bool, !aux::is_same<logger_t, no_policy>::value>;
   using transitions_t = decltype(aux::declval<sm_raw_t>()());
   using mappings_t = detail::mappings_t<transitions_t>;
   using states_t = aux::apply_t<aux::unique_t, aux::apply_t<get_states, transitions_t>>;
@@ -703,7 +729,7 @@ class sm_impl {
 #endif
   template <class TEvent, class TDeps, class TSub>
   status process_event(const TEvent &event, TDeps &deps, TSub &sub) {
-    BOOST_MSM_LITE_LOG(process_event, sm_raw_t, event);
+    log_process_event<logger_t, sm_raw_t>(has_logger{}, deps, event);
     struct self {
       using type __attribute__((unused)) = sm_impl;
       TDeps &deps_;
@@ -742,7 +768,7 @@ class sm_impl {
   }
   template <class TSelf, class TEvent>
   status process_event_no_deffer(TSelf &self, const TEvent &event) {
-    BOOST_MSM_LITE_LOG(process_event, sm_raw_t, event);
+    log_process_event<logger_t, sm_raw_t>(has_logger{}, self.deps_, event);
 #if defined(__cpp_exceptions) || defined(__EXCEPTIONS)
     return process_event_noexcept(event, self, has_exceptions{});
 #else
@@ -754,7 +780,7 @@ class sm_impl {
   status process_internal_event(...) { return status::NOT_HANDLED; }
   template <class TSelf, class TEvent, BOOST_MSM_LITE_REQUIRES(aux::is_base_of<aux::pool_type<TEvent>, events_ids_t>::value)>
   status process_internal_event(TSelf &self, const TEvent &event) {
-    BOOST_MSM_LITE_LOG(process_event, sm_raw_t, event);
+    log_process_event<logger_t, sm_raw_t>(has_logger{}, self.deps_, event);
 #if defined(__cpp_exceptions) || defined(__EXCEPTIONS)
     return process_event_noexcept(event, self, has_exceptions{});
 #else
@@ -764,7 +790,7 @@ class sm_impl {
   }
   template <class TSelf, class TEvent, BOOST_MSM_LITE_REQUIRES(aux::is_base_of<aux::pool_type<TEvent>, events_ids_t>::value)>
   status process_internal_event(TSelf &self, const TEvent &event, aux::byte &current_state) {
-    BOOST_MSM_LITE_LOG(process_event, sm_raw_t, event);
+    log_process_event<logger_t, sm_raw_t>(has_logger{}, self.deps_, event);
 #if defined(__cpp_exceptions) || defined(__EXCEPTIONS)
     return process_event_noexcept(event, self, current_state, has_exceptions{});
 #else
@@ -876,7 +902,7 @@ class sm_impl {
   void update_current_state_impl(TSelf &self, aux::byte &current_state, const aux::byte &new_state, const TSrcState &src_state,
                                  const TDstState &dst_state) {
     process_internal_event(self, on_exit{}, current_state);
-    BOOST_MSM_LITE_LOG(state_change, sm_raw_t, src_state, dst_state);
+    log_state_change<logger_t, sm_raw_t>(has_logger{}, self.deps_, src_state, dst_state);
     (void)src_state;
     (void)dst_state;
     current_state = new_state;
@@ -886,7 +912,7 @@ class sm_impl {
   void update_current_state_impl(TSelf &self, aux::byte &current_state, const aux::byte &new_state, const TSrcState &src_state,
                                  const state<sm<T>> &dst_state) {
     process_internal_event(self, on_exit{}, current_state);
-    BOOST_MSM_LITE_LOG(state_change, sm_raw_t, src_state, dst_state);
+    log_state_change<logger_t, sm_raw_t>(has_logger{}, self.deps_, src_state, dst_state);
     (void)src_state;
     (void)dst_state;
     current_state = new_state;
@@ -955,6 +981,7 @@ class sm {
   using thread_safety_t = typename TSM::thread_safety_policy::type;
   template <class T>
   using defer_queue_t = typename TSM::defer_queue_policy::template rebind<T>;
+  using logger_t = typename TSM::logger_policy::type;
   using transitions_t = decltype(aux::declval<sm_raw_t>()());
   using states_t = aux::apply_t<aux::unique_t, aux::apply_t<get_states, transitions_t>>;
   template <class>
@@ -967,7 +994,8 @@ class sm {
   using sub_sms_t =
       aux::apply_t<aux::pool, typename convert<aux::join_t<aux::type_list<TSM>, aux::apply_t<get_sub_sms, states_t>>>::type>;
   using deps = aux::apply_t<merge_deps, transitions_t>;
-  using deps_t = aux::apply_t<aux::pool, aux::apply_t<aux::unique_t, aux::join_t<deps, aux::apply_t<merge_deps, sub_sms_t>>>>;
+  using deps_t = aux::apply_t<
+      aux::pool, aux::apply_t<aux::unique_t, aux::join_t<deps, aux::type_list<logger_t>, aux::apply_t<merge_deps, sub_sms_t>>>>;
   template <class... TDeps>
   using dependable =
       aux::is_same<aux::bool_list<aux::always<TDeps>::value...>, aux::bool_list<is_required<TDeps, deps_t>::value...>>;
@@ -1131,11 +1159,22 @@ template <class T, class TEvent, class TDeps, class SM,
 decltype(auto) get_arg(const TEvent &event, TDeps &, SM &) {
   return event;
 }
+template <class... Ts, class T, class TEvent, class TDeps, class SM>
+auto call_impl(const aux::type<void> &, const aux::type_list<Ts...> &, T object, const TEvent &event, TDeps &deps,
+               sm_impl<SM> &self) {
+  object(get_arg<Ts>(event, deps, self)...);
+}
+template <class... Ts, class T, class TEvent, class TDeps, class SM>
+auto call_impl(const aux::type<bool> &, const aux::type_list<Ts...> &, T object, const TEvent &event, TDeps &deps,
+               sm_impl<SM> &self) {
+  const auto result = object(get_arg<Ts>(event, deps, self)...);
+  return result;
+}
 template <class... Ts, class T, class TEvent, class TDeps, class SM,
           aux::enable_if_t<!aux::is_base_of<operator_base, T>::value, int> = 0>
 auto call_impl(const aux::type_list<Ts...> &args, T object, const TEvent &event, TDeps &deps, sm_impl<SM> &self) {
-  (void)args;
-  return object(get_arg<Ts>(event, deps, self)...);
+  using result_type = decltype(object(get_arg<Ts>(event, deps, self)...));
+  return call_impl(aux::type<result_type>{}, args, object, event, deps, self);
 }
 template <class... Ts, class T, class TEvent, class TDeps, class SM,
           aux::enable_if_t<aux::is_base_of<operator_base, T>::value, int> = 0>
@@ -1609,6 +1648,10 @@ template <template <class...> class T>
 struct defer_queue : aux::pair<detail::defer_queue_policy__, defer_queue<T>> {
   template <class U>
   using rebind = T<U>;
+};
+template <class T>
+struct logger : aux::pair<detail::logger_policy, logger<T>> {
+  using type = T;
 };
 __attribute__((unused)) static detail::state<detail::terminate_state> X;
 __attribute__((unused)) static detail::history_state H;

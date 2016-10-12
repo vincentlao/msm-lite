@@ -59,31 +59,24 @@ template <class T, class TEvent, class TDeps, class SM,
 decltype(auto) get_arg(const TEvent &event, TDeps &, SM &) {
   return event;
 }
-#if defined(BOOST_MSM_LITE_LOG_ENABLED)
 template <class... Ts, class T, class TEvent, class TDeps, class SM>
 auto call_impl(const aux::type<void> &, const aux::type_list<Ts...> &, T object, const TEvent &event, TDeps &deps,
                sm_impl<SM> &self) {
   object(get_arg<Ts>(event, deps, self)...);
-  BOOST_MSM_LITE_LOG(action, SM, object, event);
+  //log_action<typename sm_impl<SM>::logger_t, typename sm_impl<SM>::sm_raw_t>(typename sm_impl<SM>::has_logger{}, self.deps_, event);
 }
 template <class... Ts, class T, class TEvent, class TDeps, class SM>
 auto call_impl(const aux::type<bool> &, const aux::type_list<Ts...> &, T object, const TEvent &event, TDeps &deps,
                sm_impl<SM> &self) {
-  auto result = object(get_arg<Ts>(event, deps, self)...);
-  BOOST_MSM_LITE_LOG(guard, SM, object, event, result);
+  const auto result = object(get_arg<Ts>(event, deps, self)...);
+  //log_guard<typename sm_impl<SM>::logger_t, typename sm_impl<SM>::sm_raw_t>(typename sm_impl<SM>::has_logger{}, self.deps_, event, result);
   return result;
 }
-#endif
 template <class... Ts, class T, class TEvent, class TDeps, class SM,
           aux::enable_if_t<!aux::is_base_of<operator_base, T>::value, int> = 0>
 auto call_impl(const aux::type_list<Ts...> &args, T object, const TEvent &event, TDeps &deps, sm_impl<SM> &self) {
-#if defined(BOOST_MSM_LITE_LOG_ENABLED)
   using result_type = decltype(object(get_arg<Ts>(event, deps, self)...));
   return call_impl(aux::type<result_type>{}, args, object, event, deps, self);
-#else
-  (void)args;
-  return object(get_arg<Ts>(event, deps, self)...);
-#endif
 }
 template <class... Ts, class T, class TEvent, class TDeps, class SM,
           aux::enable_if_t<aux::is_base_of<operator_base, T>::value, int> = 0>

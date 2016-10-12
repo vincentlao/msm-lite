@@ -44,6 +44,10 @@ struct defer_queue : aux::pair<detail::defer_queue_policy__, defer_queue<T>> {
   template <class U>
   using rebind = T<U>;
 };
+template <class T>
+struct logger : aux::pair<detail::logger_policy, logger<T>> {
+  using type = T;
+};
 __attribute__((unused)) static detail::state<detail::terminate_state> X;
 __attribute__((unused)) static detail::history_state H;
 __attribute__((unused)) static detail::defer defer;

@@ -79,6 +79,7 @@ struct sm_policy {
   using sm = SM;
   using thread_safety_policy = decltype(get_policy<detail::thread_safety_policy>((aux::inherit<TPolicies...> *)0));
   using defer_queue_policy = decltype(get_policy<defer_queue_policy__>((aux::inherit<TPolicies...> *)0));
+  using logger_policy = decltype(get_policy<logger_policy>((aux::inherit<TPolicies...> *)0));
 };
 template <class>
 struct get_sub_sm : aux::type_list<> {};
@@ -120,6 +121,8 @@ class sm_impl {
   using thread_safety_t = typename TSM::thread_safety_policy::type;
   template <class T>
   using defer_queue_t = typename TSM::defer_queue_policy::template rebind<T>;
+  using logger_t = typename TSM::logger_policy::type;
+  using has_logger = aux::integral_constant<bool, !aux::is_same<logger_t, no_policy>::value>;
   using transitions_t = decltype(aux::declval<sm_raw_t>()());
   using mappings_t = detail::mappings_t<transitions_t>;
   using states_t = aux::apply_t<aux::unique_t, aux::apply_t<get_states, transitions_t>>;
@@ -152,7 +155,7 @@ class sm_impl {
 
   template <class TEvent, class TDeps, class TSub>
   status process_event(const TEvent &event, TDeps &deps, TSub &sub) {
-    BOOST_MSM_LITE_LOG(process_event, sm_raw_t, event);
+    log_process_event<logger_t, sm_raw_t>(has_logger{}, deps, event);
 
     struct self {
       using type __attribute__((unused)) = sm_impl;
@@ -198,7 +201,7 @@ class sm_impl {
 
   template <class TSelf, class TEvent>
   status process_event_no_deffer(TSelf &self, const TEvent &event) {
-    BOOST_MSM_LITE_LOG(process_event, sm_raw_t, event);
+    log_process_event<logger_t, sm_raw_t>(has_logger{}, self.deps_, event);
 #if defined(__cpp_exceptions) || defined(__EXCEPTIONS) // __pph__
     return process_event_noexcept(event, self, has_exceptions{});
 #else // __pph__
@@ -212,7 +215,7 @@ class sm_impl {
 
   template <class TSelf, class TEvent, BOOST_MSM_LITE_REQUIRES(aux::is_base_of<aux::pool_type<TEvent>, events_ids_t>::value)>
   status process_internal_event(TSelf &self, const TEvent &event) {
-    BOOST_MSM_LITE_LOG(process_event, sm_raw_t, event);
+    log_process_event<logger_t, sm_raw_t>(has_logger{}, self.deps_, event);
 #if defined(__cpp_exceptions) || defined(__EXCEPTIONS) // __pph__
     return process_event_noexcept(event, self, has_exceptions{});
 #else // __pph__
@@ -223,7 +226,7 @@ class sm_impl {
 
   template <class TSelf, class TEvent, BOOST_MSM_LITE_REQUIRES(aux::is_base_of<aux::pool_type<TEvent>, events_ids_t>::value)>
   status process_internal_event(TSelf &self, const TEvent &event, aux::byte &current_state) {
-    BOOST_MSM_LITE_LOG(process_event, sm_raw_t, event);
+    log_process_event<logger_t, sm_raw_t>(has_logger{}, self.deps_, event);
 #if defined(__cpp_exceptions) || defined(__EXCEPTIONS) // __pph__
     return process_event_noexcept(event, self, current_state, has_exceptions{});
 #else // __pph__
@@ -347,7 +350,7 @@ class sm_impl {
   void update_current_state_impl(TSelf &self, aux::byte &current_state, const aux::byte &new_state, const TSrcState &src_state,
                                  const TDstState &dst_state) {
     process_internal_event(self, on_exit{}, current_state);
-    BOOST_MSM_LITE_LOG(state_change, sm_raw_t, src_state, dst_state);
+    log_state_change<logger_t, sm_raw_t>(has_logger{}, self.deps_, src_state, dst_state);
     (void)src_state;
     (void)dst_state;
     current_state = new_state;
@@ -358,7 +361,7 @@ class sm_impl {
   void update_current_state_impl(TSelf &self, aux::byte &current_state, const aux::byte &new_state, const TSrcState &src_state,
                                  const state<sm<T>> &dst_state) {
     process_internal_event(self, on_exit{}, current_state);
-    BOOST_MSM_LITE_LOG(state_change, sm_raw_t, src_state, dst_state);
+    log_state_change<logger_t, sm_raw_t>(has_logger{}, self.deps_, src_state, dst_state);
     (void)src_state;
     (void)dst_state;
     current_state = new_state;
@@ -438,6 +441,7 @@ class sm {
   using thread_safety_t = typename TSM::thread_safety_policy::type;
   template <class T>
   using defer_queue_t = typename TSM::defer_queue_policy::template rebind<T>;
+  using logger_t = typename TSM::logger_policy::type;
   using transitions_t = decltype(aux::declval<sm_raw_t>()());
   using states_t = aux::apply_t<aux::unique_t, aux::apply_t<get_states, transitions_t>>;
   template <class>
@@ -451,7 +455,7 @@ class sm {
   using sub_sms_t =
       aux::apply_t<aux::pool, typename convert<aux::join_t<aux::type_list<TSM>, aux::apply_t<get_sub_sms, states_t>>>::type>;
   using deps = aux::apply_t<merge_deps, transitions_t>;
-  using deps_t = aux::apply_t<aux::pool, aux::apply_t<aux::unique_t, aux::join_t<deps, aux::apply_t<merge_deps, sub_sms_t>>>>;
+  using deps_t = aux::apply_t<aux::pool, aux::apply_t<aux::unique_t, aux::join_t<deps, aux::type_list<logger_t>, aux::apply_t<merge_deps, sub_sms_t>>>>;
 
   template <class... TDeps>
   using dependable =

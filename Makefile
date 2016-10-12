@@ -32,9 +32,6 @@ test/ft/ft_sizeof.out:
 test/ft/ft_exceptions.out:
 	$(CXX) test/ft/ft_exceptions.cpp $(CXXFLAGS) $($(COVERAGE)) -I include -I. -include test/common/test.hpp -o test/ft/ft_exceptions.out && $($(MEMCHECK)) test/ft/ft_exceptions.out
 
-test/ft/ft_policies_logging.out:
-	#FIXME
-
 test/ft/ft_policies_thread_safe.out: #-fsanitize=thread
 	$(CXX) test/ft/ft_policies_thread_safe.cpp $(CXXFLAGS) -fno-exceptions -lpthread $($(COVERAGE)) -I include -I. -include test/common/test.hpp -o test/ft/ft_policies_thread_safe.out && $($(MEMCHECK)) test/ft/ft_policies_thread_safe.out
 
@@ -55,9 +52,6 @@ example/errors/%.out:
 
 example/%.out:
 	$(CXX) example/$*.cpp $(CXXFLAGS) -I include -o example/$*.out && $($(MEMCHECK)) example/$*.out
-
-example/logging.out:
-	#FIXME
 
 example/transitions.out:
 	#FIXME

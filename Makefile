@@ -21,7 +21,7 @@ all: test example
 pph:
 	@tools/pph.sh
 
-test: pph $(patsubst %.cpp, %.out, $(wildcard test/ft/*.cpp test/ut/*.cpp))
+test: $(patsubst %.cpp, %.out, $(wildcard test/ft/*.cpp test/ut/*.cpp))
 
 %.out:
 	$(CXX) $*.cpp $(CXXFLAGS) -fno-exceptions $($(COVERAGE)) -I include -I. -include test/common/test.hpp -o $*.out	&& $($(MEMCHECK)) $*.out

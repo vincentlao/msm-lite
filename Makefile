@@ -61,8 +61,8 @@ style_check:
 	@git diff include example test
 	@exit `git ls-files -m include example test | wc -l`
 
-#static_check:
-#	$(CLANG_TIDY) test/ut.cpp test/ft.cpp -- -std=c++1y -I include -I test -include test.hpp
+static_check:
+	$(CLANG_TIDY) $(wildcard test/ft/*.cpp test/ut/*.cpp) -- -std=c++1y -I include -I test -include common/test.hpp
 
 doc: readme doc_$(MKDOCS_THEME)
 

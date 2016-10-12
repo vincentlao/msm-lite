@@ -47,11 +47,10 @@ test/ft/ft_unit2.out:
 test/ft/ft_units.out: test/ft/ft_unit1.out test/ft/ft_unit2.out
 	$(CXX) test/ft/ft_units.cpp $(CXXFLAGS) -fno-exceptions $($(COVERAGE)) -I include -I. -include test/common/test.hpp test/ft/ft_unit1.out test/ft/ft_unit2.out -o test/ft/ft_units.out
 
-example: $(patsubst %.cpp, %.out, $(wildcard example/*.cpp))
+example: $(patsubst %.cpp, %.out, $(wildcard example/*.cpp example/errors/*.cpp))
 
 example/errors/%.out:
-	#$(CXX) example/errors/$*.cpp $(CXXFLAGS) -I include || [ $$? -ne 0 ]
-	#FIXME
+	$(CXX) example/errors/$*.cpp $(CXXFLAGS) -I include 2> /dev/null || [ $$? -ne 0 ]
 
 example/%.out:
 	$(CXX) example/$*.cpp $(CXXFLAGS) -I include -o example/$*.out && $($(MEMCHECK)) example/$*.out

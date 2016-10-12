@@ -23,8 +23,11 @@ pph:
 
 test: $(patsubst %.cpp, %.out, $(wildcard test/ft/*.cpp test/ut/*.cpp))
 
-%.out:
-	$(CXX) $*.cpp $(CXXFLAGS) -fno-exceptions $($(COVERAGE)) -I include -I. -include test/common/test.hpp -o $*.out	&& $($(MEMCHECK)) $*.out
+test/ft/%.out:
+	$(CXX) test/ft/$*.cpp $(CXXFLAGS) -fno-exceptions $($(COVERAGE)) -I include -I. -include test/common/test.hpp -o test/ft/$*.out	&& $($(MEMCHECK)) test/ft/$*.out
+
+test/ut/%.out:
+	$(CXX) test/ut/$*.cpp $(CXXFLAGS) -fno-exceptions $($(COVERAGE)) -I include -I. -include test/common/test.hpp -o test/ut/$*.out	&& $($(MEMCHECK)) test/ut/$*.out
 
 test/ft/ft_sizeof.out:
 	$(CXX) test/ft/ft_sizeof.cpp $(CXXFLAGS) -ftemplate-depth=1024 -fno-exceptions $($(COVERAGE)) -I include -I. -include test/common/test.hpp -o test/ft/ft_sizeof.out && $($(MEMCHECK)) test/ft/ft_sizeof.out

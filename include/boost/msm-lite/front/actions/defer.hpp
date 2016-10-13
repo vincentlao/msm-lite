@@ -3,9 +3,11 @@
 
 namespace detail {
 
-struct defer {
-  template <class TEvent>
-  void operator()(const TEvent &) {}
+struct action_base {};
+
+struct defer : action_base {
+  template <class TSelf, class TEvent>
+  void operator()(TSelf&, const TEvent &) {}
 };
 
 }  // detail

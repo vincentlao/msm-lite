@@ -1053,9 +1053,10 @@ class sm {
 };
 }
 namespace detail {
-struct defer {
-  template <class TEvent>
-  void operator()(const TEvent &) {}
+struct action_base {};
+struct defer : action_base {
+  template <class TSelf, class TEvent>
+  void operator()(TSelf &, const TEvent &) {}
 };
 }
 namespace detail {
@@ -1161,8 +1162,16 @@ auto call_impl(const aux::type_list<Ts...> &, T object, const TEvent &event, TSe
   return object(event, self);
 }
 template <class T, class TEvent, class TSelf>
-auto call(T object, const TEvent &event, TSelf &self) {
+auto call(T object, const TEvent &event, TSelf &self, const aux::false_type &) {
   return call_impl(args_t<T, TEvent>{}, object, event, self);
+}
+template <class T, class TEvent, class TSelf>
+auto call(T object, const TEvent &event, TSelf &self, const aux::true_type &) {
+  return object(self, event);
+}
+template <class T, class TEvent, class TSelf>
+auto call(T object, const TEvent &event, TSelf &self) {
+  return call(object, event, self, aux::is_base_of<action_base, T>{});
 }
 template <class... Ts>
 class seq_ : operator_base {

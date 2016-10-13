@@ -5,6 +5,24 @@
 
 namespace detail {
 
+template <class, class>
+struct ignore;
+template <class E, class... Ts>
+struct ignore<E, aux::type_list<Ts...>> {
+  using type = aux::join_t<aux::conditional_t<aux::is_same<event_type_t<E>, aux::remove_reference_t<Ts>>::value,
+                                              aux::type_list<>, aux::type_list<Ts>>...>;
+};
+template <class T, class E, class = void>
+struct get_deps {
+  using type = typename ignore<E, args_t<T, E>>::type;
+};
+template <class T, class E>
+using get_deps_t = typename get_deps<T, E>::type;
+template <template <class...> class T, class... Ts, class E>
+struct get_deps<T<Ts...>, E, aux::enable_if_t<aux::is_base_of<operator_base, T<Ts...>>::value>> {
+  using type = aux::join_t<get_deps_t<Ts, E>...>;
+};
+
 struct always {
   status operator()() const { return status::HANDLED; }
   aux::byte _[0];
@@ -183,8 +201,8 @@ struct transition<state<S1>, state<S2>, event<E>, G, A> {
 
   template <class SM>
   status execute(SM &self, const E &event, aux::byte &current_state) {
-    if (call(g, event, self.deps_, self.me_)) {
-      call(a, event, self.deps_, self.me_);
+    if (call(g, event, self)) {
+      call(a, event, self);
       self.me_.template update_current_state<typename state<S1>::explicit_states>(
           self, current_state, aux::get_id<typename SM::type::states_ids_t, -1, dst_state>(), state<src_state>{},
           state<dst_state>{});
@@ -211,7 +229,7 @@ struct transition<state<S1>, state<S2>, event<E>, always, A> {
 
   template <class SM>
   status execute(SM &self, const E &event, aux::byte &current_state) {
-    call(a, event, self.deps_, self.me_);
+    call(a, event, self);
     self.me_.template update_current_state<typename state<S1>::explicit_states>(
         self, current_state, aux::get_id<typename SM::type::states_ids_t, -1, dst_state>(), state<src_state>{},
         state<dst_state>{});
@@ -235,7 +253,7 @@ struct transition<state<S1>, state<S2>, event<E>, G, none> {
 
   template <class SM>
   status execute(SM &self, const E &event, aux::byte &current_state) {
-    if (call(g, event, self.deps_, self.me_)) {
+    if (call(g, event, self)) {
       self.me_.template update_current_state<typename state<S1>::explicit_states>(
           self, current_state, aux::get_id<typename SM::type::states_ids_t, -1, dst_state>(), state<src_state>{},
           state<dst_state>{});

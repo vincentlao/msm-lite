@@ -28,81 +28,63 @@ template <class T, class>
 auto args__(int) -> aux::function_traits_t<decltype(&T::operator())>;
 template <class T, class E>
 using args_t = decltype(args__<T, E>(0));
-template <class, class>
-struct ignore;
-template <class E, class... Ts>
-struct ignore<E, aux::type_list<Ts...>> {
-  using type = aux::join_t<aux::conditional_t<aux::is_same<event_type_t<E>, aux::remove_reference_t<Ts>>::value,
-                                              aux::type_list<>, aux::type_list<Ts>>...>;
-};
-template <class T, class E, class = void>
-struct get_deps {
-  using type = typename ignore<E, args_t<T, E>>::type;
-};
-template <class T, class E>
-using get_deps_t = typename get_deps<T, E>::type;
-template <template <class...> class T, class... Ts, class E>
-struct get_deps<T<Ts...>, E, aux::enable_if_t<aux::is_base_of<operator_base, T<Ts...>>::value>> {
-  using type = aux::join_t<get_deps_t<Ts, E>...>;
-};
-template <class T, class TEvent, class TDeps, class SM,
+
+template <class T, class TEvent, class TSelf,
           aux::enable_if_t<!aux::is_same<TEvent, aux::remove_reference_t<T>>::value, int> = 0>
-decltype(auto) get_arg(const TEvent &, TDeps &deps, SM &) {
-  return aux::get<T>(deps);
+decltype(auto) get_arg(const TEvent &, TSelf & self) {
+  return aux::get<T>(self.deps_);
 }
-template <class, class TEvent, class TDeps, class SM>
-decltype(auto) get_arg(const exception<TEvent> &event, TDeps &, SM &) {
+template <class, class TEvent, class TSelf>
+decltype(auto) get_arg(const exception<TEvent> &event, TSelf &) {
   return event.exception;
 }
-template <class T, class TEvent, class TDeps, class SM,
+template <class T, class TEvent, class TSelf,
           aux::enable_if_t<aux::is_same<TEvent, aux::remove_reference_t<T>>::value, int> = 0>
-decltype(auto) get_arg(const TEvent &event, TDeps &, SM &) {
+decltype(auto) get_arg(const TEvent &event, TSelf &) {
   return event;
 }
-template <class... Ts, class T, class TEvent, class TDeps, class SM>
-auto call_impl(const aux::type<void> &, const aux::type_list<Ts...> &, T object, const TEvent &event, TDeps &deps,
-               sm_impl<SM> &self) {
-  object(get_arg<Ts>(event, deps, self)...);
-  // log_action<typename sm_impl<SM>::logger_t, typename sm_impl<SM>::sm_raw_t>(typename sm_impl<SM>::has_logger{}, self.deps_,
-  // event);
+template <class... Ts, class T, class TEvent, class TSelf>
+auto call_impl(const aux::type<void> &, const aux::type_list<Ts...> &, T object, const TEvent &event, TSelf &self) {
+  object(get_arg<Ts>(event, self)...);
+  using sm = typename TSelf::type;
+  log_action<typename sm::logger_t, typename sm::sm_raw_t>(typename sm::has_logger{}, self.deps_, object, event);
 }
-template <class... Ts, class T, class TEvent, class TDeps, class SM>
-auto call_impl(const aux::type<bool> &, const aux::type_list<Ts...> &, T object, const TEvent &event, TDeps &deps,
-               sm_impl<SM> &self) {
-  const auto result = object(get_arg<Ts>(event, deps, self)...);
-  // log_guard<typename sm_impl<SM>::logger_t, typename sm_impl<SM>::sm_raw_t>(typename sm_impl<SM>::has_logger{}, self.deps_,
-  // event, result);
+template <class... Ts, class T, class TEvent, class TSelf>
+auto call_impl(const aux::type<bool> &, const aux::type_list<Ts...> &, T object, const TEvent &event, TSelf &self) {
+  const auto result = object(get_arg<Ts>(event, self)...);
+  using sm = typename TSelf::type;
+  log_guard<typename sm::logger_t, typename sm::sm_raw_t>(typename sm::has_logger{}, self.deps_, object, event, result);
   return result;
 }
-template <class... Ts, class T, class TEvent, class TDeps, class SM,
+template <class... Ts, class T, class TEvent, class TSelf,
           aux::enable_if_t<!aux::is_base_of<operator_base, T>::value, int> = 0>
-auto call_impl(const aux::type_list<Ts...> &args, T object, const TEvent &event, TDeps &deps, sm_impl<SM> &self) {
-  using result_type = decltype(object(get_arg<Ts>(event, deps, self)...));
-  return call_impl(aux::type<result_type>{}, args, object, event, deps, self);
+auto call_impl(const aux::type_list<Ts...> &args, T object, const TEvent &event, TSelf &self) {
+  using result_type = decltype(object(get_arg<Ts>(event, self)...));
+  return call_impl(aux::type<result_type>{}, args, object, event, self);
 }
-template <class... Ts, class T, class TEvent, class TDeps, class SM,
+template <class... Ts, class T, class TEvent, class TSelf,
           aux::enable_if_t<aux::is_base_of<operator_base, T>::value, int> = 0>
-auto call_impl(const aux::type_list<Ts...> &, T object, const TEvent &event, TDeps &deps, sm_impl<SM> &self) {
-  return object(event, deps, self);
+auto call_impl(const aux::type_list<Ts...> &, T object, const TEvent &event, TSelf &self) {
+  return object(event, self);
 }
-template <class T, class TEvent, class TDeps, class SM>
-auto call(T object, const TEvent &event, TDeps &deps, sm_impl<SM> &self) {
-  return call_impl(args_t<T, TEvent>{}, object, event, deps, self);
+template <class T, class TEvent, class TSelf>
+auto call(T object, const TEvent &event, TSelf &self) {
+  return call_impl(args_t<T, TEvent>{}, object, event, self);
 }
 template <class... Ts>
 class seq_ : operator_base {
  public:
   explicit seq_(Ts... ts) : a(ts...) {}
 
-  template <class TEvent, class TDeps, class SM>
-  void operator()(const TEvent &event, TDeps &deps, SM &self) {
-    for_all(aux::make_index_sequence<sizeof...(Ts)>{}, event, deps, self);
+  template <class TEvent, class TSelf>
+  void operator()(const TEvent &event, TSelf &self) {
+    for_all(aux::make_index_sequence<sizeof...(Ts)>{}, event, self);
   }
 
  private:
-  template <int... Ns, class TEvent, class TDeps, class SM>
-  void for_all(const aux::index_sequence<Ns...> &, const TEvent &event, TDeps &deps, SM &self) {
-    int _[]{0, (call(aux::get_by_id<Ns>(a), event, deps, self), 0)...};
+  template <int... Ns, class TEvent, class TSelf>
+  void for_all(const aux::index_sequence<Ns...> &, const TEvent &event, TSelf &self) {
+    int _[]{0, (call(aux::get_by_id<Ns>(a), event, self), 0)...};
     (void)_;
   }
 
@@ -113,16 +95,16 @@ class and_ : operator_base {
  public:
   explicit and_(Ts... ts) : g(ts...) {}
 
-  template <class TEvent, class TDeps, class SM>
-  auto operator()(const TEvent &event, TDeps &deps, SM &self) {
-    return for_all(aux::make_index_sequence<sizeof...(Ts)>{}, event, deps, self);
+  template <class TEvent, class TSelf>
+  auto operator()(const TEvent &event, TSelf &self) {
+    return for_all(aux::make_index_sequence<sizeof...(Ts)>{}, event, self);
   }
 
  private:
-  template <int... Ns, class TEvent, class TDeps, class SM>
-  auto for_all(const aux::index_sequence<Ns...> &, const TEvent &event, TDeps &deps, SM &self) {
+  template <int... Ns, class TEvent, class TSelf>
+  auto for_all(const aux::index_sequence<Ns...> &, const TEvent &event, TSelf &self) {
     auto result = true;
-    int _[]{0, (call(aux::get_by_id<Ns>(g), event, deps, self) ? result : result = false)...};
+    int _[]{0, (call(aux::get_by_id<Ns>(g), event, self) ? result : result = false)...};
     (void)_;
     return result;
   }
@@ -134,16 +116,16 @@ class or_ : operator_base {
  public:
   explicit or_(Ts... ts) : g(ts...) {}
 
-  template <class TEvent, class TDeps, class SM>
-  auto operator()(const TEvent &event, TDeps &deps, SM &self) {
-    return for_all(aux::make_index_sequence<sizeof...(Ts)>{}, event, deps, self);
+  template <class TEvent, class TSelf>
+  auto operator()(const TEvent &event, TSelf &self) {
+    return for_all(aux::make_index_sequence<sizeof...(Ts)>{}, event, self);
   }
 
  private:
-  template <int... Ns, class TEvent, class TDeps, class SM>
-  auto for_all(const aux::index_sequence<Ns...> &, const TEvent &event, TDeps &deps, SM &self) {
+  template <int... Ns, class TEvent, class TSelf>
+  auto for_all(const aux::index_sequence<Ns...> &, const TEvent &event, TSelf &self) {
     auto result = false;
-    int _[]{0, (call(aux::get_by_id<Ns>(g), event, deps, self) ? result = true : result)...};
+    int _[]{0, (call(aux::get_by_id<Ns>(g), event, self) ? result = true : result)...};
     (void)_;
     return result;
   }
@@ -155,9 +137,9 @@ class not_ : operator_base {
  public:
   explicit not_(T t) : g(t) {}
 
-  template <class TEvent, class TDeps, class SM>
-  auto operator()(const TEvent &event, TDeps &deps, SM &self) {
-    return !call(g, event, deps, self);
+  template <class TEvent, class TSelf>
+  auto operator()(const TEvent &event, TSelf &self) {
+    return !call(g, event, self);
   }
 
  private:
@@ -186,4 +168,4 @@ auto operator,(const T1 &t1, const T2 &t2) {
   return detail::seq_<aux::zero_wrapper<T1>, aux::zero_wrapper<T2>>(aux::zero_wrapper<T1>{t1}, aux::zero_wrapper<T2>{t2});
 }
 
-#endif /* end of include guard: OPERATORS_AUOQ1Q6 */
+#endif

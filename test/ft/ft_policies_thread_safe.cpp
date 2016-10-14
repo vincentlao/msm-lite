@@ -44,14 +44,13 @@ test process_the_same_event = [] {
   expect(sm.is("s1"_s) || sm.is("s2"_s));
 };
 
-#if 0
 test process_event_reentrant = [] {
   struct c {
     auto operator()() {
       using namespace msm;
       // clang-format off
       return make_transition_table(
-         *"idle"_s + event<e1> / process_event(e2{})
+         *"idle"_s + event<e1> / queue(e2{})
         , "idle"_s + event<e2> = "s2"_s
       );
       // clang-format on
@@ -62,4 +61,3 @@ test process_event_reentrant = [] {
   // Hangs forever awaiting lock if mutex is not reentrant.
   sm.process_event(e1{});
 };
-#endif

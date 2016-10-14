@@ -31,7 +31,7 @@ using args_t = decltype(args__<T, E>(0));
 
 template <class T, class TEvent, class TSelf,
           aux::enable_if_t<!aux::is_same<TEvent, aux::remove_reference_t<T>>::value, int> = 0>
-decltype(auto) get_arg(const TEvent &, TSelf & self) {
+decltype(auto) get_arg(const TEvent &, TSelf &self) {
   return aux::get<T>(self.deps_);
 }
 template <class, class TEvent, class TSelf>
@@ -56,23 +56,21 @@ auto call_impl(const aux::type<bool> &, const aux::type_list<Ts...> &, T object,
   log_guard<typename sm::logger_t, typename sm::sm_raw_t>(typename sm::has_logger{}, self.deps_, object, event, result);
   return result;
 }
-template <class... Ts, class T, class TEvent, class TSelf,
-          aux::enable_if_t<!aux::is_base_of<operator_base, T>::value, int> = 0>
+template <class... Ts, class T, class TEvent, class TSelf, aux::enable_if_t<!aux::is_base_of<operator_base, T>::value, int> = 0>
 auto call_impl(const aux::type_list<Ts...> &args, T object, const TEvent &event, TSelf &self) {
   using result_type = decltype(object(get_arg<Ts>(event, self)...));
   return call_impl(aux::type<result_type>{}, args, object, event, self);
 }
-template <class... Ts, class T, class TEvent, class TSelf,
-          aux::enable_if_t<aux::is_base_of<operator_base, T>::value, int> = 0>
+template <class... Ts, class T, class TEvent, class TSelf, aux::enable_if_t<aux::is_base_of<operator_base, T>::value, int> = 0>
 auto call_impl(const aux::type_list<Ts...> &, T object, const TEvent &event, TSelf &self) {
   return object(event, self);
 }
 template <class T, class TEvent, class TSelf>
-auto call(T object, const TEvent &event, TSelf &self, const aux::false_type&) {
+auto call(T object, const TEvent &event, TSelf &self, const aux::false_type &) {
   return call_impl(args_t<T, TEvent>{}, object, event, self);
 }
 template <class T, class TEvent, class TSelf>
-auto call(T object, const TEvent &event, TSelf &self, const aux::true_type&) {
+auto call(T object, const TEvent &event, TSelf &self, const aux::true_type &) {
   return object(self, event);
 }
 template <class T, class TEvent, class TSelf>

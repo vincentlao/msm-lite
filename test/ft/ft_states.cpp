@@ -124,7 +124,6 @@ test states_entry_exit_actions = [] {
   expect(sm.is(s2));
 };
 
-
 test states_entry_exit_sub_sm = [] {
   struct sub_1 {
     auto operator()() noexcept {
@@ -215,4 +214,3 @@ test states_entry_exit_sub_sm = [] {
   expect(s1.ls1_1_entry);
   expect(c_.sub1_entry);
 };
-

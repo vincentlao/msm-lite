@@ -7,7 +7,7 @@ struct action_base {};
 
 struct defer : action_base {
   template <class TSelf, class TEvent>
-  void operator()(TSelf&, const TEvent &) {}
+  void operator()(TSelf &, const TEvent &) {}
 };
 
 }  // detail

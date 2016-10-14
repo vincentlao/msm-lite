@@ -22,11 +22,11 @@ struct e1 {};
 struct e2 {};
 struct e3 {};
 
-const auto guard = [] { std::cout << "guard" << '\n'; return true; };
-const auto action = [] { std::cout << "action" << '\n'; };
-
 struct hello_world {
   auto operator()() const {
+    const auto guard = [] { std::cout << "guard" << '\n'; return true; };
+    const auto action = [] { std::cout << "action" << '\n'; };
+
     using namespace msm;
     return make_transition_table(
        *"idle"_s + event<e1> = "s1"_s

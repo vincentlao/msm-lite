@@ -9,7 +9,7 @@
 #if __has_include(<boost/di.hpp>)
 // clang-format on
 #include <boost/di.hpp>
-#include "boost/msm-lite.hpp"
+#include <boost/msm-lite.hpp>
 
 namespace di = boost::di;
 namespace msm = boost::msm::lite;

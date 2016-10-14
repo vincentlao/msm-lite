@@ -706,6 +706,7 @@ class sm_impl {
       aux::integral_constant<bool, aux::size<initial_states_t>::value != aux::size<initial_but_not_history_states_t>::value>;
   using events_t = aux::apply_t<aux::unique_t, aux::apply_t<get_events, transitions_t>>;
   using events_ids_t = aux::apply_t<aux::pool, events_t>;
+  using defer_t = defer_queue_t<aux::apply_t<aux::variant, events_t>>;
   using deps = aux::apply_t<merge_deps, transitions_t>;
   static constexpr auto regions = aux::size<initial_states_t>::value > 0 ? aux::size<initial_states_t>::value : 1;
   static_assert(regions > 0, "At least one initial state is required");
@@ -729,7 +730,8 @@ class sm_impl {
       TDeps &deps_;
       sm_impl &me_;
       TSub &sub_sms_;
-    } self_{deps, *this, sub};
+      defer_t &defer_;
+    } self_{deps, *this, sub, defer_};
 #if defined(__cpp_exceptions) || defined(__EXCEPTIONS)
     const auto handled = process_event_noexcept(event, self_, has_exceptions{});
 #else
@@ -747,7 +749,8 @@ class sm_impl {
       TDeps &deps_;
       sm_impl &me_;
       TSub &sub_sms_;
-    } self_{deps, *this, sub};
+      defer_t &defer_;
+    } self_{deps, *this, sub, defer_};
     process_internal_event(self_, anonymous{});
     process_internal_event(self_, on_entry{});
   }
@@ -861,8 +864,8 @@ class sm_impl {
     if (handled == status::DEFFERED) {
       defer_.push(event);
     } else {
-      while (!defer_.empty() && defer_.front().template apply<detail::status>([this, &self](const auto &event) {
-        return process_event_no_deffer(self, event);
+      while (!defer_.empty() && defer_.front().template apply<detail::status>([this, &self](const auto &e) {
+        return process_event_no_deffer(self, e);
       }) == status::HANDLED) {
         defer_.pop();
       }
@@ -960,7 +963,7 @@ class sm_impl {
 
  private:
   thread_safety_t thread_safety_;
-  defer_queue_t<aux::apply_t<aux::variant, events_t>> defer_;
+  defer_t defer_;
 };
 template <class TSM>
 class sm {

@@ -40,8 +40,7 @@ test transition_process_event = [] {
   sm.process_event(e1{});
   expect(sm.is(s1));
   expect(!c_.a_called);
-  // TODO
-  // sm.process_event(e2{});  // + queue(e3{})
-  // expect(1 == c_.a_called);
-  // expect(sm.is(msm::X));
+  sm.process_event(e2{});  // + queue(e3{})
+  expect(1 == c_.a_called);
+  expect(sm.is(msm::X));
 };

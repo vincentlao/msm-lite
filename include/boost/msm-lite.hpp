@@ -1054,26 +1054,6 @@ class sm {
 }
 namespace detail {
 struct action_base {};
-struct defer : action_base {
-  template <class TSelf, class TEvent>
-  void operator()(TSelf &, const TEvent &) {}
-};
-}
-namespace detail {
-struct queue {
-  template <class TEvent>
-  struct queue_impl {
-    template <class T>
-    void operator()(const T &) {}
-    TEvent event;
-  };
-  template <class TEvent>
-  auto operator()(const TEvent &event) {
-    return queue_impl<TEvent>{event};
-  }
-};
-}
-namespace detail {
 template <class...>
 struct transition;
 template <class, class>
@@ -1084,6 +1064,32 @@ template <class, class>
 struct transition_eg;
 template <class, class>
 struct transition_ea;
+}
+namespace detail {
+struct defer : action_base {
+  template <class TSelf, class TEvent>
+  void operator()(TSelf &, const TEvent &) {}
+};
+}
+namespace detail {
+struct queue {
+  template <class TEvent>
+  class queue_impl : public action_base {
+   public:
+    explicit queue_impl(const TEvent &event) : event(event) {}
+    template <class TSelf, class T>
+    void operator()(TSelf &self, const T &) {
+      self.me_.process_event(event, self.deps_, self.sub_sms_);
+    }
+
+   private:
+    TEvent event;
+  };
+  template <class TEvent>
+  auto operator()(const TEvent &event) {
+    return queue_impl<TEvent>{event};
+  }
+};
 }
 namespace detail {
 template <class>

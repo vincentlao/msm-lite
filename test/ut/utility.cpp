@@ -109,4 +109,4 @@ test type_id_basic = [] {
   static_expect(1 == get_id<type_ids, -1, double>());
 };
 
-} // aux
+}  // aux

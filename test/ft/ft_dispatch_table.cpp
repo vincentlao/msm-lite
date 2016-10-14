@@ -38,7 +38,7 @@ struct event3 {
   static constexpr auto id = 3;
   explicit event3(const runtime_event &) {}
 };
-struct event4 { };
+struct event4 {};
 
 test dispatchable_concept = [] {
   using namespace msm;
@@ -160,4 +160,3 @@ test dispatch_runtime_event_sub_sm = [] {
     expect(1 == in_sub);
   }
 };
-

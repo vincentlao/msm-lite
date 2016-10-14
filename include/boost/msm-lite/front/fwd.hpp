@@ -3,6 +3,8 @@
 
 namespace detail {
 
+struct action_base {};
+
 template <class...>
 struct transition;
 template <class, class>

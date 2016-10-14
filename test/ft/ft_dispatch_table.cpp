@@ -38,6 +38,15 @@ struct event3 {
   static constexpr auto id = 3;
   explicit event3(const runtime_event &) {}
 };
+struct event4 { };
+
+test dispatchable_concept = [] {
+  using namespace msm;
+  static_expect(!concepts::dispatchable<runtime_event, aux::type_list<event4, event1>>::value);
+  static_expect(concepts::dispatchable<runtime_event, aux::type_list<>>::value);
+  static_expect(concepts::dispatchable<runtime_event, aux::type_list<event1, event2>>::value);
+  static_expect(concepts::dispatchable<runtime_event, aux::type_list<event2, event1>>::value);
+};
 
 test dispatch_runtime_event = [] {
   struct c {
@@ -151,3 +160,4 @@ test dispatch_runtime_event_sub_sm = [] {
     expect(1 == in_sub);
   }
 };
+

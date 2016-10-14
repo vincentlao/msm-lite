@@ -41,12 +41,12 @@ int main() {
 
   {
     runtime_event event{1};
-    assert(dispatch_event(event, event.id));
+    dispatch_event(event, event.id);
   }
 
   {
     runtime_event event{2};
-    assert(dispatch_event(event, event.id));
+    dispatch_event(event, event.id);
   }
 
   assert(sm.is(msm::X));

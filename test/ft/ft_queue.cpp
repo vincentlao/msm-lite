@@ -18,9 +18,9 @@ struct e3 {};
 const auto idle = msm::state<class idle>;
 const auto s1 = msm::state<class s1>;
 
-test transition_process_event = [] {
+test queue_event = [] {
   struct c {
-    auto operator()() noexcept {
+    auto operator()() {
       using namespace msm;
       // clang-format off
       return make_transition_table(

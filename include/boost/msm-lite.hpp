@@ -1009,12 +1009,12 @@ class sm {
   }
   explicit sm(deps_t &deps) : deps_(deps), sub_sms_{deps} { start(aux::type<sub_sms_t>{}); }
   template <class TEvent>
-  status process_event(const TEvent &event) {
-    return static_cast<aux::pool_type<sm_impl<TSM>> &>(sub_sms_).value.process_event(event, deps_, sub_sms_);
+  void process_event(const TEvent &event) {
+    static_cast<aux::pool_type<sm_impl<TSM>> &>(sub_sms_).value.process_event(event, deps_, sub_sms_);
   }
   template <class TEvent>
-  status process_event(const event<TEvent> &) {
-    return process_event(TEvent{});
+  void process_event(const event<TEvent> &) {
+    process_event(TEvent{});
   }
   template <class TVisitor, BOOST_MSM_LITE_REQUIRES(concepts::callable<void, TVisitor>::value)>
   void visit_current_states(const TVisitor &visitor) const {

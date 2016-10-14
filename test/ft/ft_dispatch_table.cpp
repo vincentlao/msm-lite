@@ -61,31 +61,31 @@ test dispatch_runtime_event = [] {
 
   {
     runtime_event event{1};
-    expect(dispatcher(event, event.id));
+    dispatcher(event, event.id);
     expect(sm.is(s1));
   }
 
   {
     runtime_event event{9};
-    expect(!dispatcher(event, event.id));
+    dispatcher(event, event.id);
     expect(sm.is(s1));
   }
 
   {
     runtime_event event{2};
-    expect(dispatcher(event, event.id));
+    dispatcher(event, event.id);
     expect(sm.is(s2));
   }
 
   {
     runtime_event event{3};
-    expect(dispatcher(event, event.id));
+    dispatcher(event, event.id);
     expect(sm.is(msm::X));
   }
 
   {
     runtime_event event{5};
-    expect(!dispatcher(event, event.id));
+    dispatcher(event, event.id);
     expect(sm.is(msm::X));
   }
 };
@@ -125,28 +125,28 @@ test dispatch_runtime_event_sub_sm = [] {
 
   {
     runtime_event event{1};
-    expect(dispatcher(event, event.id));
+    dispatcher(event, event.id);
     expect(sm.is(msm::state<sub>));
     expect(0 == in_sub);
   }
 
   {
     runtime_event event{2};
-    expect(dispatcher(event, event.id));
+    dispatcher(event, event.id);
     expect(sm.is(msm::state<sub>));
     expect(1 == in_sub);
   }
 
   {
     runtime_event event{3};
-    expect(dispatcher(event, event.id));
+    dispatcher(event, event.id);
     expect(sm.is(msm::X));
     expect(1 == in_sub);
   }
 
   {
     runtime_event event{4};
-    expect(!dispatcher(event, event.id));
+    dispatcher(event, event.id);
     expect(sm.is(msm::X));
     expect(1 == in_sub);
   }

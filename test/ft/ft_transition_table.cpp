@@ -148,7 +148,6 @@ test transition_table_types = [] {
         , idle + event<e2> [guard1 || guard2] / (action1, action2, []{}, [](int, auto, float){}) = s1
         , idle + event<e1> [guard1 && guard2 && [] { return true; } ] / (action1, action2, []{}, [](int, auto, float){}) = X
         , idle + event<e1> [guard1 && guard2 && [] { return true; } && [] (auto) { return false; } ] / (action1, action2, []{}, [](int, auto, double){}) = X
-        //
         , s1 <= *idle + event<e1> [guard1] / (action1, []{})
         , s2 <= s1 + event<e2> / ([] { })
         , s1 <= s2 + event<e4> / defer

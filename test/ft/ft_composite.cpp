@@ -221,7 +221,6 @@ test composite_history = [] {
   };
 
   struct c {
-    c(){};
     auto operator()() noexcept {
       using namespace msm;
 
@@ -283,7 +282,6 @@ test composite_history_region = [] {
   };
 
   struct c {
-    c(){};
     auto operator()() noexcept {
       using namespace msm;
 
